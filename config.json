@@ -1,0 +1,48 @@
+{
+    "database_path":"database.sqlite",
+    "messages": {
+        "welcome_message":"Сообщение приветствие",
+        "help_message":"Сообщение помощь"
+    },
+    "buttons":{
+        "passenger_call_taxi" : {
+            "type" : "reply",
+            "layout" : [2],
+            "buttons" : [
+                {"data":"", "text":"Заказать такси", "options" : ["request_location"]},
+                {"data":"", "text":"Оставить свой контакт", "options" : ["request_contact"]}
+            ]
+        },
+        "driver_accept_refuse" : {
+            "type" : "inline",
+            "layout" : [2],
+            "buttons" : [
+                {"data":"driver_accept", "text":"Принять заказ", "options" : ["request_location"]},
+                {"data":"driver_refuse", "text":"Скрыть заказ"}
+            ]
+        },
+        "passenger_cancel" : {
+            "type" : "inline",
+            "layout" : [1],
+            "buttons" : [
+                {"data":"passenger_cancel", "text":"Отменить заказ"}
+            ]
+        },
+        "driver_cancel_wait_pick" : {
+            "type" : "inline",
+            "layout" : [1,2],
+            "buttons" : [
+                {"data":"driver_cancel", "text":"Отменить заказ", "options" : ["request_location"]},
+                {"data":"driver_wait", "text":"Ожидаю Пассажира", "options" : ["request_location"]},
+                {"data":"driver_pick", "text":"Забрал Пассажира", "options" : ["request_location"]}
+            ]
+        },
+        "driver_complete" : {
+            "type" : "inline",
+            "layout" : [1],
+            "buttons" : [
+                {"data":"driver_complete", "text":"Завершить заказ", "options" : ["request_location"]}
+            ]
+        }
+    }
+}
