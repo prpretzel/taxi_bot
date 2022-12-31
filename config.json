@@ -5,6 +5,22 @@
         "help_message":"Сообщение помощь"
     },
     "buttons":{
+        "help_menu" : {
+            "type" : "inline",
+            "layout" : [2],
+            "buttons" : [
+                {"data":"instruction", "text":"Инструкция"},
+                {"data":"job", "text":"Хочу работать в такси"}
+            ]
+        },
+        "driver_menu" : {
+            "type" : "inline",
+            "layout" : [2],
+            "buttons" : [
+                {"data":"driver_end_work", "text":"Закончить работу"},
+                {"data":"driver_start_work", "text":"Начать работу"}
+            ]
+        },
         "passenger_call_taxi" : {
             "type" : "reply",
             "layout" : [2],

@@ -20,7 +20,6 @@ class StartHandler(BaseHandler):
             text=self._config.messages['welcome_message'],
             reply_markup=self._kbs['passenger_call_taxi']
         )
-
         self._logger.info(self, message.from_user.id, 'User start')
 
 
@@ -31,9 +30,15 @@ class HelpHandler(BaseHandler):
         Args:
             message (types.Message)
         """
-        await message.reply(self._config.messages['help_message'])
+        await self._bot.send_message(
+            chat_id=message.from_user.id,
+            text=self._config.messages['help_message'],
+            reply_markup=self._kbs['help_menu']
+        )
         self._logger.info(self, message.from_user.id, 'User help')
         
+
+
 
 
 class UpdateContact(BaseHandler):

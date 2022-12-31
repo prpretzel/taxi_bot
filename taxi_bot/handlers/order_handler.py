@@ -6,11 +6,6 @@ from taxi_bot.load_config import Config
 from taxi_bot.logger import Logger
 from taxi_bot.buttons import keyboard_generator
 
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Text
-from aiogram.dispatcher.filters.state import State, StatesGroup
-
-
 class OrderBaseHandler(BaseHandler):
 
     def __init__(
@@ -24,9 +19,16 @@ class OrderBaseHandler(BaseHandler):
         super().__init__(db, bot, config, kbs, logger)
 
 
+class DriverStatus(OrderBaseHandler):
+
+    async def __call__(self, message: types.Message) -> None:
+        print(message)
+        pass
+
+
 class NewOrder(OrderBaseHandler):
 
-    async def __call__(self, message: types.Location, state: FSMContext) -> None:
+    async def __call__(self, message: types.Location) -> None:
         passenger_id = message.from_user.id
         active_order = self._db.get_order_user_active_order(passenger_id)
         if active_order:
@@ -64,6 +66,7 @@ class DriverAccept(OrderBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         order_id = callback_query.data.split('@')[-1]
         driver_id = callback_query.from_user.id
+        self._db.update_driver_status(driver_id, 150)
         for chat_id, message_id in self._db.get_order_messages(order_id):
             try:
                 if chat_id != callback_query.from_user.id:
@@ -78,7 +81,7 @@ class DriverAccept(OrderBaseHandler):
             reply_markup=keyboard_generator(self._config.buttons['driver_cancel_wait_pick'], order_id),
         )
         self._db.create_order_message(order_id, driver_id, message.message_id)
-        new_status = 101
+        new_status = 200
         driver_info = self._db.get_driver_by_id(driver_id)
         driver_car = driver_info.driver_car
         driver_phone_number = driver_info.phone_number
@@ -128,6 +131,7 @@ class DriverComplete(OrderBaseHandler):
         order_id = callback_query.data.split('@')[-1]
         new_status = 400
         driver_id = callback_query.from_user.id
+        self._db.update_driver_status(driver_id, 100)
         passenger_id, _ = self._db.update_order(order_id, new_status, driver_id)
         message = await self._bot.send_message(chat_id=passenger_id, text=f"Поездка завершена (пассажир)")
         self._db.create_order_message(order_id, passenger_id, message.message_id)
@@ -147,6 +151,7 @@ class DriverCancel(OrderBaseHandler):
                 pass
         new_status = 150
         passenger_id, driver_id = self._db.update_order(order_id, new_status)
+        self._db.update_driver_status(driver_id, 100)
         await self._bot.send_message(chat_id=passenger_id, text=f"Водитель отменил поездку")
         await self._bot.send_message(chat_id=driver_id, text=f"Вы отменили поездку")
         await self._bot.answer_callback_query(callback_query.id)
@@ -163,6 +168,7 @@ class PassengerCancel(OrderBaseHandler):
                 pass
         new_status = 50
         passenger_id, driver_id = self._db.update_order(order_id, new_status)
+        self._db.update_driver_status(driver_id, 100)
         await self._bot.send_message(chat_id=passenger_id, text=f"Вы отменили поездку")
         if driver_id:
             await self._bot.send_message(chat_id=driver_id, text=f"Пользователь отменил поездку")

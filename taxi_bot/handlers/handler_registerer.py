@@ -10,7 +10,7 @@ from taxi_bot.handlers.client import (
 )
 
 from taxi_bot.handlers.order_handler import (
-    # OrderStatus,
+    DriverStatus,
     NewOrder,
     DriverAccept,
     DriverRefuse,
@@ -28,10 +28,9 @@ def register_handlers(
         config: Config, 
         kbs: dict, 
         dp: Dispatcher, 
-        logger: Logger,
-        # states: OrderStatus
+        logger: Logger
     ):
-    INSTANCES = db, bot, config, kbs, logger#, states
+    INSTANCES = db, bot, config, kbs, logger
     ADMIN_COND = lambda c: c.from_user.id == config.ADMIN_ID
     MODER_COND = lambda c: c.from_user.id in config.MODER_IDs
     
@@ -42,15 +41,19 @@ def register_handlers(
     dp.register_message_handler(HelpHandler(*INSTANCES), commands=['help'])
     dp.register_message_handler(UpdateContact(*INSTANCES), content_types=['contact'])
 
+    # driver handlers
+    dp.register_message_handler(DriverStatus(*INSTANCES), commands=['Начать работу'])
+    dp.register_message_handler(DriverStatus(*INSTANCES), commands=['Закончить работу'])
+
     # call a taxi handlers
     dp.register_message_handler(NewOrder(*INSTANCES), content_types=['location'])
-    dp.register_callback_query_handler(DriverAccept   (*INSTANCES), lambda c: c.data.startswith('driver_accept'),        )
-    dp.register_callback_query_handler(DriverRefuse   (*INSTANCES), lambda c: c.data.startswith('driver_refuse'),        )
-    dp.register_callback_query_handler(DriverWait     (*INSTANCES), lambda c: c.data.startswith('driver_wait'),          )
-    dp.register_callback_query_handler(DriverPick     (*INSTANCES), lambda c: c.data.startswith('driver_pick'),          )
-    dp.register_callback_query_handler(DriverComplete (*INSTANCES), lambda c: c.data.startswith('driver_complete'),      )
-    dp.register_callback_query_handler(DriverCancel   (*INSTANCES), lambda c: c.data.startswith('driver_cancel'),        )
-    dp.register_callback_query_handler(PassengerCancel(*INSTANCES), lambda c: c.data.startswith('passenger_cancel'),     )
+    dp.register_callback_query_handler(DriverAccept   (*INSTANCES), lambda c: c.data.startswith('driver_accept'),   )
+    dp.register_callback_query_handler(DriverRefuse   (*INSTANCES), lambda c: c.data.startswith('driver_refuse'),   )
+    dp.register_callback_query_handler(DriverWait     (*INSTANCES), lambda c: c.data.startswith('driver_wait'),     )
+    dp.register_callback_query_handler(DriverPick     (*INSTANCES), lambda c: c.data.startswith('driver_pick'),     )
+    dp.register_callback_query_handler(DriverComplete (*INSTANCES), lambda c: c.data.startswith('driver_complete'), )
+    dp.register_callback_query_handler(DriverCancel   (*INSTANCES), lambda c: c.data.startswith('driver_cancel'),   )
+    dp.register_callback_query_handler(PassengerCancel(*INSTANCES), lambda c: c.data.startswith('passenger_cancel'),)
 
 
     # dp.register_message_handler(StartHandler(*INSTANCES), commands=['start'])
