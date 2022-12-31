@@ -7,10 +7,9 @@
     "buttons":{
         "help_menu" : {
             "type" : "inline",
-            "layout" : [2],
+            "layout" : [1],
             "buttons" : [
-                {"data":"instruction", "text":"Инструкция"},
-                {"data":"job", "text":"Хочу работать в такси"}
+                {"data":"job", "text":"Работа в такси"}
             ]
         },
         "driver_menu" : {

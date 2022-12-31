@@ -164,7 +164,9 @@ class DataBase:
         driver.driver_status = new_status
         self._session.commit()
 
-    def get_available_drivers_id(self):
-        drivers: List[Driver] = self._session.query(Driver).filter(Driver.driver_status==100).all()
-        drivers = [dr.user_id for dr in drivers]
+    def get_drivers_id(self, status=None):
+        drivers = self._session.query(Driver)
+        if status:
+            drivers = drivers.filter(Driver.driver_status==status)
+        drivers = [dr.user_id for dr in drivers.all()]
         return drivers

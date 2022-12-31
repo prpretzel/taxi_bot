@@ -38,9 +38,6 @@ class HelpHandler(BaseHandler):
         self._logger.info(self, message.from_user.id, 'User help')
         
 
-
-
-
 class UpdateContact(BaseHandler):
 
     async def __call__(self, message: types.Contact) -> None:

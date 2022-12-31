@@ -19,13 +19,6 @@ class OrderBaseHandler(BaseHandler):
         super().__init__(db, bot, config, kbs, logger)
 
 
-class DriverStatus(OrderBaseHandler):
-
-    async def __call__(self, message: types.Message) -> None:
-        print(message)
-        pass
-
-
 class NewOrder(OrderBaseHandler):
 
     async def __call__(self, message: types.Location) -> None:
@@ -45,7 +38,7 @@ class NewOrder(OrderBaseHandler):
         location_from = lat + "|" + lon
         order_id = self._db.create_order(passenger_id, location_from)
         self._db.create_order_message(order_id, passenger_id, message.message_id)
-        for dr in self._db.get_available_drivers_id():
+        for dr in self._db.get_drivers_id(100):
             message = await self._bot.send_location(
                 chat_id=dr,
                 latitude=lat,
