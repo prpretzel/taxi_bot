@@ -27,8 +27,9 @@ class CreateBot:
 
     async def startup(self, _):
         bot_commands = [
-            types.BotCommand(command='/start', description='Welcome Page'),
-            types.BotCommand(command='/help', description='Help Page')
+            types.BotCommand(command='/start', description='Стартовая страница'),
+            types.BotCommand(command='/help', description='Инструкция'),
+            types.BotCommand(command='/job', description='Работа в такси')
         ]
         await self.bot.set_my_commands(bot_commands)
 

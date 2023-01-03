@@ -130,3 +130,4 @@ dmypy.json
 credentials.json
 database.sqlite
 log.log
+connect_gcp.sh

@@ -1,11 +1,13 @@
 {
     "database_path":"database.sqlite",
     "messages": {
-        "welcome_message":"Сообщение приветствие",
-        "help_message":"Сообщение помощь"
+        "welcome_message":"Добро пожаловать в Бот Богучарского Такси!\nДля начала оставьте свой номер телефона нажав кнопку 'Оставить свой контакт', чтобы водители могли позвонить Вам для уточнения информации",
+        "call_taxi_message":"Вы можете вызвать такси нажав кнопку 'Заказать такси' или отправив геопозицию используя меню",
+        "help_message":"В скором времени здесь появится инструкция",
+        "job_message":"Здесь вы можете оставить свою заявку, чтобы работать в такси"
     },
     "buttons":{
-        "help_menu" : {
+        "job_menu" : {
             "type" : "inline",
             "layout" : [1],
             "buttons" : [
@@ -20,19 +22,48 @@
                 {"data":"driver_start_work", "text":"Начать работу"}
             ]
         },
-        "passenger_call_taxi" : {
-            "type" : "reply",
+        "driver_continue_registration" : {
+            "type" : "inline",
             "layout" : [2],
             "buttons" : [
-                {"data":"", "text":"Заказать такси", "options" : ["request_location"]},
+                {"data":"driver_continue_registration", "text":"Продолжить регистрацию"},
+                {"data":"driver_cancel_registration", "text":"Отменить регистрацию"}
+            ]
+        },
+        "driver_cancel_registration" : {
+            "type" : "inline",
+            "layout" : [1],
+            "buttons" : [
+                {"data":"driver_cancel_registration", "text":"Отменить регистрацию"}
+            ]
+        },
+        "admin_accept_refuse_driver" : {
+            "type" : "inline",
+            "layout" : [2],
+            "buttons" : [
+                {"data":"driver_accepted", "text":"Принять водителя"},
+                {"data":"driver_refused", "text":"Отклонить водителя"}
+            ]
+        },
+        "request_contact" : {
+            "type" : "reply",
+            "layout" : [1],
+            "buttons" : [
                 {"data":"", "text":"Оставить свой контакт", "options" : ["request_contact"]}
+            ]
+        },
+        "passenger_call_taxi" : {
+            "type" : "reply",
+            "layout" : [1],
+            "buttons" : [
+                {"data":"", "text":"Заказать такси", "options" : ["request_location"]}
             ]
         },
         "driver_accept_refuse" : {
             "type" : "inline",
             "layout" : [2],
             "buttons" : [
-                {"data":"driver_accept", "text":"Принять заказ", "options" : ["request_location"]},
+                {"data":"driver_accept", "text":"Принять заказ"},
                 {"data":"driver_refuse", "text":"Скрыть заказ"}
             ]
         },
@@ -45,18 +76,18 @@
         },
         "driver_cancel_wait_pick" : {
             "type" : "inline",
-            "layout" : [1,2],
+            "layout" : [2,1],
             "buttons" : [
-                {"data":"driver_cancel", "text":"Отменить заказ", "options" : ["request_location"]},
-                {"data":"driver_wait", "text":"Ожидаю Пассажира", "options" : ["request_location"]},
-                {"data":"driver_pick", "text":"Забрал Пассажира", "options" : ["request_location"]}
+                {"data":"driver_wait", "text":"Ожидаю Пассажира"},
+                {"data":"driver_pick", "text":"Забрал Пассажира"},
+                {"data":"driver_cancel", "text":"Отменить заказ"}
             ]
         },
         "driver_complete" : {
             "type" : "inline",
             "layout" : [1],
             "buttons" : [
-                {"data":"driver_complete", "text":"Завершить заказ", "options" : ["request_location"]}
+                {"data":"driver_complete", "text":"Завершить заказ"}
             ]
         }
     }

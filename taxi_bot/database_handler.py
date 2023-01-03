@@ -8,8 +8,29 @@ Base = declarative_base()
 config = Config()
 
 
-class Passenger(Base):
-    __tablename__ = 'passengers'
+# class Passenger(Base):
+#     __tablename__ = 'passengers'
+
+#     user_id = Column('user_id', Integer, primary_key=True)
+#     username = Column('username', String)
+#     first_name = Column('first_name', String)
+#     last_name = Column('last_name', String)
+#     phone_number = Column('phone_number', String)
+#     registration_date = Column('registration_date', String)
+#     active = Column('active', Integer)
+
+
+#     def __init__(self, user_id, username, first_name, last_name, phone_number, registration_date):
+#         self.user_id = user_id
+#         self.username = username
+#         self.first_name = first_name
+#         self.last_name = last_name
+#         self.phone_number = phone_number
+#         self.registration_date = registration_date
+
+
+class User(Base):
+    __tablename__ = 'users'
 
     user_id = Column('user_id', Integer, primary_key=True)
     username = Column('username', String)
@@ -17,39 +38,33 @@ class Passenger(Base):
     last_name = Column('last_name', String)
     phone_number = Column('phone_number', String)
     registration_date = Column('registration_date', String)
-
-
-    def __init__(self, user_id, username, first_name, last_name, phone_number, registration_date):
-        self.user_id = user_id
-        self.username = username
-        self.first_name = first_name
-        self.last_name = last_name
-        self.phone_number = phone_number
-        self.registration_date = registration_date
-
-
-class Driver(Base):
-    __tablename__ = 'drivers'
-
-    user_id = Column('user_id', Integer, primary_key=True)
-    username = Column('username', String)
-    first_name = Column('first_name', String)
-    last_name = Column('last_name', String)
-    phone_number = Column('phone_number', String)
-    registration_date = Column('registration_date', String)
+    active = Column('active', Integer)
     driver_status = Column('driver_status', Integer)
     driver_car = Column('driver_car', Integer)
 
 
-    def __init__(self, user_id, username, first_name, last_name, phone_number, registration_date, driver_status, driver_car):
+    def __init__(
+            self, 
+            user_id, 
+            username, 
+            first_name, 
+            last_name, 
+            phone_number, 
+            user_registration_date, 
+            driver_registration_date=None, 
+            driver_status=None, 
+            driver_car=None
+        ):
         self.user_id = user_id
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
         self.phone_number = phone_number
-        self.registration_date = registration_date
-        self.driver_car = driver_car
+        self.active = True
+        self.user_registration_date = user_registration_date
+        self.driver_registration_date = driver_registration_date
         self.driver_status = driver_status
+        self.driver_car = driver_car
 
     
 class Order(Base):
@@ -57,8 +72,8 @@ class Order(Base):
 
     order_id = Column('order_id', Integer, Identity(), primary_key=True)
     order_dt = Column('order_dt', String)
-    passenger_id = Column('passenger_id', Integer, ForeignKey('passengers.user_id'))
-    driver_id = Column('driver_id', Integer, ForeignKey('drivers.user_id'))
+    passenger_id = Column('passenger_id', Integer)
+    driver_id = Column('driver_id', Integer)
     location_from = Column('location_from', String)
     order_status = Column('order_status', String)
 
@@ -94,28 +109,40 @@ class DataBase:
         Session = sessionmaker(bind=engine)
         self._session = Session()
 
-    def create_passenger(self, user_id, username, first_name, last_name, phone_number):
-        exists = self._session.query(Passenger).filter(Passenger.user_id==user_id).first()
-        if not exists:
-            registration_date = datetime.now()
-            new_passenger = Passenger(user_id, username, first_name, last_name, phone_number, registration_date)
-            self._session.add(new_passenger)
-            self._session.commit()
+    def get_group(self, group=None):
+        if group=='Passenger':
+            return self._session.query(User).filter(User.driver_status==0)
+        elif group=='Driver':
+            return self._session.query(User).filter(User.driver_status!=0)
+        else:
+            return self._session.query(User)
 
-    def create_driver(self, user_id, username, first_name, last_name, phone_number, car):
-        exists = self._session.query(Driver).filter(Driver.user_id==user_id).first()
-        if not exists:
+    def update_activity(self, user_id, activity_status):
+        user: User = self.get_group().filter(User.user_id==user_id).first()
+        user.active = activity_status
+        self._session.commit()
+
+    def create_user(self, user_id, username, first_name, last_name, phone_number):
+        user: User = self._session.query(User).filter(User.user_id==user_id).first()
+        if not user:
             registration_date = datetime.now()
-            status = 100
-            new_driver = Driver(user_id, username, first_name, last_name, phone_number, registration_date, status, car)
-            self._session.add(new_driver)
-            self._session.commit()
+            new_passenger = User(user_id, username, first_name, last_name, phone_number, registration_date)
+            self._session.add(new_passenger)
+        else:
+            user.active = 1
+        self._session.commit()
+
+    def create_driver(self, user_id, first_name, driver_car):
+        user: User = self._session.query(User).filter(User.user_id==user_id).first()
+        user.driver_registration_date = datetime.now()
+        user.first_name = first_name
+        user.driver_status = 50
+        user.driver_car = driver_car
+        self._session.commit()
 
     def update_phone_number(self, user_id, phone_number):
-        passenger: Passenger = self._session.query(Passenger).filter(Passenger.user_id==user_id).first()
-        driver: Driver = self._session.query(Driver).filter(Driver.user_id==user_id).first()
-        if driver: driver.phone_number = phone_number
-        if passenger: passenger.phone_number = phone_number
+        user: User = self._session.query(User).filter(User.user_id==user_id).first()
+        user.phone_number = phone_number
         self._session.commit()
 
     def create_order(self, passenger_id, location_from):
@@ -134,8 +161,8 @@ class DataBase:
     def get_order_user_active_order(self, user_id):
         return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status==100).first()
 
-    def create_order_message(self, order_id, dr, message_id):
-        new_message_order = SentMessage(order_id, dr, message_id)
+    def create_order_message(self, order_id, user_id, message_id):
+        new_message_order = SentMessage(order_id, user_id, message_id)
         self._session.add(new_message_order)
         self._session.commit()
 
@@ -152,21 +179,21 @@ class DataBase:
         return order.passenger_id, order.driver_id
 
     def get_passenger_by_id(self, passenger_id):
-        passenger = self._session.query(Passenger).filter(Passenger.user_id==passenger_id).first()
+        passenger: User = self.get_group().filter(User.user_id==passenger_id).first()
         return passenger
 
     def get_driver_by_id(self, driver_id):
-        driver = self._session.query(Driver).filter(Driver.user_id==driver_id).first()
+        driver: User = self.get_group('Driver').filter(User.user_id==driver_id).first()
         return driver
 
     def update_driver_status(self, driver_id, new_status):
-        driver = self._session.query(Driver).filter(Driver.user_id==driver_id).first()
+        driver = self.get_group('Driver').filter(User.user_id==driver_id).first()
         driver.driver_status = new_status
         self._session.commit()
 
     def get_drivers_id(self, status=None):
-        drivers = self._session.query(Driver)
+        drivers = self.get_group('Driver')
         if status:
-            drivers = drivers.filter(Driver.driver_status==status)
+            drivers = drivers.filter(User.driver_status==status)
         drivers = [dr.user_id for dr in drivers.all()]
         return drivers

@@ -13,12 +13,12 @@ class StartHandler(BaseHandler):
         username = message.from_user.username
         first_name = message.from_user.first_name
         last_name = message.from_user.last_name
-        self._db.create_passenger(user_id, username, first_name, last_name, '')
+        self._db.create_user(user_id, username, first_name, last_name, '')
 
         await self._bot.send_message(
             chat_id=user_id,
             text=self._config.messages['welcome_message'],
-            reply_markup=self._kbs['passenger_call_taxi']
+            reply_markup=self._kbs['request_contact']
         )
         self._logger.info(self, message.from_user.id, 'User start')
 
@@ -32,10 +32,32 @@ class HelpHandler(BaseHandler):
         """
         await self._bot.send_message(
             chat_id=message.from_user.id,
-            text=self._config.messages['help_message'],
-            reply_markup=self._kbs['help_menu']
+            text=self._config.messages['help_message']
         )
         self._logger.info(self, message.from_user.id, 'User help')
+
+
+class JobHandler(BaseHandler):
+
+    async def __call__(self, message: types.Message) -> None:
+        """Shows help message and welcome keyboard
+        Args:
+            message (types.Message)
+        """
+        await self._bot.send_message(
+            chat_id=message.from_user.id,
+            text=self._config.messages['job_message'],
+            reply_markup=self._kbs['job_menu']
+        )
+        self._logger.info(self, message.from_user.id, 'User job')
+        
+
+class MemberStatus(BaseHandler):
+
+    async def __call__(self, update: types.ChatMemberUpdated) -> None:
+        user_id = update.from_user.id
+        activity_status = update.new_chat_member.is_chat_member()
+        self._db.update_activity(user_id, activity_status)
         
 
 class UpdateContact(BaseHandler):
@@ -44,3 +66,9 @@ class UpdateContact(BaseHandler):
         user_id = message.from_user.id
         phone_number = '+' + str(message.contact.phone_number)
         self._db.update_phone_number(user_id, phone_number)
+
+        await self._bot.send_message(
+            chat_id=user_id,
+            text=self._config.messages['call_taxi_message'],
+            reply_markup=self._kbs['passenger_call_taxi']
+        )
