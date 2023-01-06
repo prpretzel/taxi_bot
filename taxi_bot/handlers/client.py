@@ -44,12 +44,20 @@ class JobHandler(BaseHandler):
         Args:
             message (types.Message)
         """
-        await self._bot.send_message(
-            chat_id=message.from_user.id,
-            text=self._config.messages['job_message'],
-            reply_markup=self._kbs['job_menu']
-        )
-        self._logger.info(self, message.from_user.id, 'User job')
+        driver_id = message.from_user.id
+        if driver_id in self._db.get_drivers_id():
+            await self._bot.send_message(
+                chat_id=driver_id,
+                text='Меню водителя',
+                reply_markup=self._kbs['driver_menu']
+            )
+        else:
+            await self._bot.send_message(
+                chat_id=message.from_user.id,
+                text=self._config.messages['job_message'],
+                reply_markup=self._kbs['job_menu']
+            )
+            self._logger.info(self, message.from_user.id, 'User job')
         
 
 class MemberStatus(BaseHandler):

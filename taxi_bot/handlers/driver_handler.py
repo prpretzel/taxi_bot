@@ -27,23 +27,16 @@ class DriverBaseHandler(BaseHandler):
         super().__init__(db, bot, config, kbs, logger)
 
 
-class DriverMenu(DriverBaseHandler):
+class DriverJob(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id = callback_query.from_user.id
-        if driver_id in self._db.get_drivers_id():
-            await self._bot.send_message(
-                chat_id=driver_id,
-                text='Меню водителя',
-                reply_markup=self._kbs['driver_menu']
-            )
-        else:
-            await self._bot.send_message(
-                chat_id=driver_id,
-                text=f'Для регистрации в качестве водителя Вам необходимо указать своё имя, '
-                     f'а также цвет, марку и регистрационный номер автомобиля',
-                reply_markup=self._kbs['driver_continue_registration']
-            )
+        await self._bot.send_message(
+            chat_id=driver_id,
+            text=f'Для регистрации в качестве водителя Вам необходимо указать своё имя, '
+                    f'а также цвет, марку и регистрационный номер автомобиля',
+            reply_markup=self._kbs['driver_continue_registration']
+        )
         await self._bot.answer_callback_query(callback_query.id)
 
 
@@ -62,7 +55,6 @@ class DriverContinueRegistration(DriverBaseHandler):
 class DriverName(DriverBaseHandler):
 
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
-        print(await state.get_state(), '*'*40)
         async with state.proxy() as data:
             data['name'] = message.text
         await DriverForm.next()
@@ -76,7 +68,6 @@ class DriverName(DriverBaseHandler):
 class DriverCar(DriverBaseHandler):
 
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
-        print(await state.get_state(), '*'*40)
         async with state.proxy() as data:
             data['car'] = message.text
         await DriverForm.next()
@@ -95,12 +86,15 @@ class DriverCar(DriverBaseHandler):
 class DriverEndRegistration(DriverBaseHandler):
 
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
-        print(await state.get_state(), '*'*40)
         async with state.proxy() as data:
             name = data['name']
             car = data['car']
             data['driver_id'] = message.from_user.id
         await state.finish()
+        await self._bot.send_message(
+            chat_id=message.from_user.id,
+            text=f'Заявка составлена. Ожидайте подтверждения администратора.',
+        )
         await self._bot.send_message(
             chat_id=self._config.ADMIN_ID,
             text=f'Новый водитель\n'
@@ -117,14 +111,8 @@ class DriverAccepted(DriverBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, first_name, car = callback_query.message.text.split('\n')[-1].split('@')
         self._db.create_driver(driver_id, first_name, car)
-        await self._bot.send_message(
-            chat_id=self._config.ADMIN_ID,
-            text=f'Водитель принят'
-        )
-        await self._bot.send_message(
-            chat_id=driver_id,
-            text=f'Вы стали водителем'
-        )
+        await self._bot.send_message(chat_id=self._config.ADMIN_ID, text=f'Водитель принят')
+        await self._bot.send_message(chat_id=driver_id, text=f'Вы стали водителем')
         await self._bot.answer_callback_query(callback_query.id)
 
 
@@ -133,14 +121,8 @@ class DriverRefused(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, first_name, car = callback_query.message.text.split('\n')[-1].split('@')
-        await self._bot.send_message(
-            chat_id=self._config.ADMIN_ID,
-            text=f'Водитель отклонен'
-        )
-        await self._bot.send_message(
-            chat_id=driver_id,
-            text=f'Ваша заявка отклонена'
-        )
+        await self._bot.send_message(chat_id=self._config.ADMIN_ID, text=f'Водитель отклонен')
+        await self._bot.send_message(chat_id=driver_id, text=f'Ваша заявка отклонена')
         await self._bot.answer_callback_query(callback_query.id)
 
 
@@ -149,15 +131,12 @@ class DriverCancelRegistration(DriverBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
         driver_id = callback_query.from_user.id
         current_state = await state.get_state()
-        await self._bot.send_message(
-            chat_id=driver_id,
-            text='Регистрация отменена'
-        )
+        await self._bot.send_message(chat_id=driver_id, text='Регистрация отменена')
         await self._bot.answer_callback_query(callback_query.id)
         if current_state is None:
             return
-
         await state.finish()
+
 
 class DriverStatus(DriverBaseHandler):
 
@@ -166,10 +145,7 @@ class DriverStatus(DriverBaseHandler):
         driver_info = self._db.get_driver_by_id(driver_id)
         status = driver_info.driver_status
         if status==150:
-            await self._bot.send_message(
-                chat_id=driver_id,
-                text='Завершите или отмените свой заказ',
-            )
+            await self._bot.send_message(chat_id=driver_id, text='Завершите или отмените свой заказ',)
             await self._bot.answer_callback_query(callback_query.id)
             return
 
@@ -177,6 +153,7 @@ class DriverStatus(DriverBaseHandler):
         if data == 'driver_start_work':
             new_status = 100 
             text = 'Вы начали свой рабочий день'
+            await self.show_active_orders(driver_id)
         elif data == 'driver_end_work':
             new_status = 50
             text = 'Вы закончили свой рабочий день'

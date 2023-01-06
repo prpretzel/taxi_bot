@@ -8,27 +8,6 @@ Base = declarative_base()
 config = Config()
 
 
-# class Passenger(Base):
-#     __tablename__ = 'passengers'
-
-#     user_id = Column('user_id', Integer, primary_key=True)
-#     username = Column('username', String)
-#     first_name = Column('first_name', String)
-#     last_name = Column('last_name', String)
-#     phone_number = Column('phone_number', String)
-#     registration_date = Column('registration_date', String)
-#     active = Column('active', Integer)
-
-
-#     def __init__(self, user_id, username, first_name, last_name, phone_number, registration_date):
-#         self.user_id = user_id
-#         self.username = username
-#         self.first_name = first_name
-#         self.last_name = last_name
-#         self.phone_number = phone_number
-#         self.registration_date = registration_date
-
-
 class User(Base):
     __tablename__ = 'users'
 
@@ -158,7 +137,11 @@ class DataBase:
         order = self._session.query(Order).filter(Order.order_id==order_id).filter(Order.order_status==100).first()
         return order
 
-    def get_order_user_active_order(self, user_id):
+    def get_orders(self, status) -> List[Order]:
+        order = self._session.query(Order).filter(Order.order_status==status).all()
+        return order
+
+    def get_user_active_order(self, user_id):
         return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status==100).first()
 
     def create_order_message(self, order_id, user_id, message_id):
@@ -166,8 +149,11 @@ class DataBase:
         self._session.add(new_message_order)
         self._session.commit()
 
-    def get_order_messages(self, order_id):
-        messages: List[SentMessage] = self._session.query(SentMessage).filter(SentMessage.order_id==order_id).all()
+    def get_order_messages(self, order_id=None, chat_id=None):
+        if order_id:
+            messages: List[SentMessage] = self._session.query(SentMessage).filter(SentMessage.order_id==order_id).all()
+        if chat_id:
+            messages: List[SentMessage] = self._session.query(SentMessage).filter(SentMessage.chat_id==chat_id).all()
         messages = [(m.chat_id, m.message_id) for m in messages]
         return messages
 

@@ -18,19 +18,13 @@ class OrderBaseHandler(BaseHandler):
         ):
         super().__init__(db, bot, config, kbs, logger)
 
-    async def delete_old_messages(self, order_id):
-        for chat_id, message_id in self._db.get_order_messages(order_id):
-            try:
-                await self._bot.delete_message(chat_id, message_id)
-            except:
-                pass
 
 
 class NewOrder(OrderBaseHandler):
 
     async def __call__(self, message: types.Location) -> None:
         passenger_id = message.from_user.id
-        active_order = self._db.get_order_user_active_order(passenger_id)
+        active_order = self._db.get_user_active_order(passenger_id)
         if active_order:
             order_id = active_order.order_id
             message = await self._bot.send_message(
@@ -67,12 +61,15 @@ class DriverAccept(OrderBaseHandler):
         order_id = callback_query.data.split('@')[-1]
         driver_id = callback_query.from_user.id
         self._db.update_driver_status(driver_id, 150)
-        for chat_id, message_id in self._db.get_order_messages(order_id):
-            try:
-                if chat_id != callback_query.from_user.id:
-                    await self._bot.delete_message(chat_id, message_id)
-            except:
-                self._db.create_order_message(order_id, driver_id, callback_query.message.message_id)
+        # for chat_id, message_id in self._db.get_order_messages(order_id):
+        #     try:
+        #         if chat_id != callback_query.from_user.id:
+        #             await self._bot.delete_message(chat_id, message_id)
+        #     except:
+        #         self._db.create_order_message(order_id, driver_id, callback_query.message.message_id)
+        await self.delete_old_messages(order_id)
+        order = self._db.get_order_by_id(order_id)
+        await self.show_order(order, driver_id)
 
         order_info = self._db.get_order_by_id(order_id)
         passenger_phone_number = self._db.get_passenger_by_id(order_info.passenger_id).phone_number
@@ -139,6 +136,7 @@ class DriverComplete(OrderBaseHandler):
         self._db.create_order_message(order_id, passenger_id, message.message_id)
         message = await self._bot.send_message(chat_id=driver_id, text=f"Поездка завершена (водитель)")
         self._db.create_order_message(order_id, driver_id, message.message_id)
+        await self.show_active_orders(driver_id)
         await self._bot.answer_callback_query(callback_query.id)
 
 
@@ -152,6 +150,7 @@ class DriverCancel(OrderBaseHandler):
         self._db.update_driver_status(driver_id, 100)
         await self._bot.send_message(chat_id=passenger_id, text=f"Водитель отменил поездку")
         await self._bot.send_message(chat_id=driver_id, text=f"Вы отменили поездку")
+        await self.show_active_orders(driver_id)
         await self._bot.answer_callback_query(callback_query.id)
 
 
@@ -166,4 +165,5 @@ class PassengerCancel(OrderBaseHandler):
         if driver_id:
             await self._bot.send_message(chat_id=driver_id, text=f"Пользователь отменил поездку")
             self._db.update_driver_status(driver_id, 100)
+        await self.show_active_orders(driver_id)
         await self._bot.answer_callback_query(callback_query.id)

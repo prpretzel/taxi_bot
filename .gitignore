@@ -129,5 +129,6 @@ dmypy.json
 .pyre/
 credentials.json
 database.sqlite
+database
 log.log
 connect_gcp.sh

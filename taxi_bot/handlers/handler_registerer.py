@@ -18,7 +18,7 @@ from taxi_bot.handlers.client import (
 
 from taxi_bot.handlers.driver_handler import (
     DriverForm,
-    DriverMenu,
+    DriverJob,
     DriverContinueRegistration,
     DriverName,
     DriverCar,
@@ -65,7 +65,7 @@ def register_handlers(
     dp.register_my_chat_member_handler(MemberStatus(*INSTANCES))
 
     # driver handlers
-    dp.register_callback_query_handler(DriverMenu(*INSTANCES), L('job'))
+    dp.register_callback_query_handler(DriverJob(*INSTANCES), L('job'))
     dp.register_callback_query_handler(DriverContinueRegistration(*INSTANCES), L('driver_continue_registration'))
     dp.register_message_handler(DriverName(*INSTANCES), state=DriverForm.name)
     dp.register_message_handler(DriverCar(*INSTANCES), state=DriverForm.car)
