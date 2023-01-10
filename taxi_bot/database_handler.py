@@ -16,10 +16,12 @@ class User(Base):
     first_name = Column('first_name', String)
     last_name = Column('last_name', String)
     phone_number = Column('phone_number', String)
-    registration_date = Column('registration_date', String)
+    user_registration_date = Column('user_registration_date', String)
+    driver_registration_date = Column('driver_registration_date', String)
     active = Column('active', Integer)
     driver_status = Column('driver_status', Integer)
     driver_car = Column('driver_car', Integer)
+    driver_balance = Column('driver_balance', Integer)
 
 
     def __init__(
@@ -32,7 +34,8 @@ class User(Base):
             user_registration_date, 
             driver_registration_date=None, 
             driver_status=None, 
-            driver_car=None
+            driver_car=None, 
+            driver_balance=0
         ):
         self.user_id = user_id
         self.username = username
@@ -44,29 +47,35 @@ class User(Base):
         self.driver_registration_date = driver_registration_date
         self.driver_status = driver_status
         self.driver_car = driver_car
+        self.driver_balance = driver_balance
 
     
 class Order(Base):
     __tablename__ = 'orders'
 
     order_id = Column('order_id', Integer, Identity(), primary_key=True)
-    order_dt = Column('order_dt', String)
+    order_dt = Column('order_dt', DateTime)
+    wait_dt = Column('wait_dt', DateTime)
+    pick_dt = Column('pick_dt', DateTime)
+    end_dt = Column('end_dt', DateTime)
+    cancel_dt = Column('cancel_dt', DateTime)
     passenger_id = Column('passenger_id', Integer)
     driver_id = Column('driver_id', Integer)
     location_from = Column('location_from', String)
+    location_to = Column('location_to', String)
+    price = Column('price', Integer)
     order_status = Column('order_status', String)
 
 
-    def __init__(self, order_dt, passenger_id, driver_id, location_from, order_status):
+    def __init__(self, order_dt, passenger_id, location_from):
         self.order_dt = order_dt
         self.passenger_id = passenger_id
-        self.driver_id = driver_id
         self.location_from = location_from
-        self.order_status = order_status
+        self.order_status = 100
 
 
-class SentMessage(Base):
-    __tablename__ = 'SentMessage'
+class Message(Base):
+    __tablename__ = 'messages'
 
     log_id = Column('log_id', Integer, Identity(), primary_key=True)
     order_id = Column('order_id', Integer)
@@ -125,37 +134,71 @@ class DataBase:
         self._session.commit()
 
     def create_order(self, passenger_id, location_from):
-        driver_id = None
         order_dt = datetime.now()
-        status = 100
-        new_order = Order(order_dt, passenger_id, driver_id, location_from, status)
+        new_order = Order(order_dt, passenger_id, location_from)
         self._session.add(new_order)
         self._session.commit()
         return new_order.order_id
 
-    def get_order_by_id(self, order_id):
-        order = self._session.query(Order).filter(Order.order_id==order_id).filter(Order.order_status==100).first()
+    def update_order_location_to(self, order_id, location_to):
+        order = self.get_order_by_id(order_id)
+        order.location_to = location_to
+        self._session.commit()
+
+    def update_order_price(self, order_id, price):
+        order = self.get_order_by_id(order_id)
+        order.price = price
+        self._session.commit()
+
+    def update_wait_dt(self, order_id):
+        order = self.get_order_by_id(order_id)
+        if not order.wait_dt:
+            order.wait_dt = datetime.now()
+            self._session.commit()
+
+    def update_pick_dt(self, order_id):
+        order = self.get_order_by_id(order_id)
+        order.pick_dt = datetime.now()
+        self._session.commit()
+
+    def update_end_dt(self, order_id):
+        order = self.get_order_by_id(order_id)
+        order.end_dt = datetime.now()
+        self._session.commit()
+
+    def update_cancel_dt(self, order_id):
+        order = self.get_order_by_id(order_id)
+        order.cancel_dt = datetime.now()
+        self._session.commit()
+
+    def get_order_by_id(self, order_id) -> Order:
+        order = self._session.query(Order).filter(Order.order_id==order_id).first()
         return order
+        
+    def delete_order_message(self, log_id):
+        self._session.query(Message).filter(Message.log_id==log_id).delete()
+        self._session.commit()
 
     def get_orders(self, status) -> List[Order]:
         order = self._session.query(Order).filter(Order.order_status==status).all()
         return order
 
     def get_user_active_order(self, user_id):
-        return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status==100).first()
+        statuses = [100,200,250,300]
+        return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status.in_(statuses)).first()
 
     def create_order_message(self, order_id, user_id, message_id):
-        new_message_order = SentMessage(order_id, user_id, message_id)
+        new_message_order = Message(order_id, user_id, message_id)
         self._session.add(new_message_order)
         self._session.commit()
 
-    def get_order_messages(self, order_id=None, chat_id=None):
+    def get_order_messages(self, order_id=None, chat_id=None) -> List[Message]:
+        messages = self._session.query(Message)
         if order_id:
-            messages: List[SentMessage] = self._session.query(SentMessage).filter(SentMessage.order_id==order_id).all()
+            messages = messages.filter(Message.order_id==order_id)
         if chat_id:
-            messages: List[SentMessage] = self._session.query(SentMessage).filter(SentMessage.chat_id==chat_id).all()
-        messages = [(m.chat_id, m.message_id) for m in messages]
-        return messages
+            messages = messages.filter(Message.chat_id==chat_id)
+        return messages.all()
 
     def update_order(self, order_id, new_status, driver_id=None):
         order: Order = self._session.query(Order).filter(Order.order_id==order_id).first()

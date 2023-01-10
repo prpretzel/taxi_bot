@@ -26,14 +26,28 @@ class BaseHandler:
     async def __call__(self, *args, **kwargs):
         raise NotImplementedError
 
-    async def show_order(self, order, driver_id):
+    async def set_state(self, state, field, value):
+        async with state.proxy() as data:
+            data[field] = value
+
+    async def get_state(self, state, field):
+        async with state.proxy() as data:
+            value = data[field]
+        return value
+
+    async def show_order(self, order, driver_id, keyboard=True):
         lat, lon = order.location_from.split('|')
         order_id = order.order_id
-        message = await self._bot.send_location(
+        title = order.location_to
+        address = f"{order.price} рублей"
+        keyboard = keyboard_generator(self._config.buttons['driver_accept_refuse'], order_id) if keyboard else None
+        message = await self._bot.send_venue(
             chat_id=driver_id,
             latitude=lat,
             longitude=lon,
-            reply_markup=keyboard_generator(self._config.buttons['driver_accept_refuse'], order_id),
+            title=title,
+            address=address,
+            reply_markup=keyboard,
         )
         self._db.create_order_message(order_id, driver_id, message.message_id)
 
@@ -48,13 +62,15 @@ class BaseHandler:
         for order in active_orders:
             await self.show_order(order, driver_id)
 
-    async def delete_old_messages(self, order_id=None, driver_id=None):
+    async def delete_old_messages(self, order_id=None, chat_id=None):
         if order_id:
             orders = self._db.get_order_messages(order_id=order_id)
-        if driver_id:
+        if chat_id:
             orders = self._db.get_order_messages(chat_id=chat_id)
-        for chat_id, message_id in orders:
+        for order in orders:
+            log_id, chat_id, message_id = order.log_id, order.chat_id, order.message_id
             try:
                 await self._bot.delete_message(chat_id, message_id)
             except:
                 pass
+            self._db.delete_order_message(log_id)
