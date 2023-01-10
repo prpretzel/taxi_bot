@@ -19,6 +19,7 @@ class Config:
             self._creds = json.load(f)
         
         self.API_TOKEN = self._creds['TOKEN']
+        self.PAYMENT_TOKEN = self._creds['PAYMENT_TOKEN']
         self.ADMIN_ID = self._creds['ADMIN_ID']
         self.MODER_IDs = self._creds['MODER_IDs']
         self.messages = self._config['messages']
