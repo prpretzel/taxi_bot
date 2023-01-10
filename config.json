@@ -19,7 +19,16 @@
             "layout" : [2],
             "buttons" : [
                 {"data":"driver_end_work", "text":"Закончить работу"},
-                {"data":"driver_start_work", "text":"Начать работу"}
+                {"data":"driver_start_work", "text":"Начать работу"},
+                {"data":"driver_topup_select", "text":"Пополнить кошелек"}
+            ]
+        },
+        "driver_topup_menu" : {
+            "type" : "inline",
+            "layout" : [1,1],
+            "buttons" : [
+                {"data":"driver_topup@100", "text":"10 поездок (100 рублей)"},
+                {"data":"driver_topup@200", "text":"25 поездок (200 рублей)"}
             ]
         },
         "driver_continue_registration" : {
