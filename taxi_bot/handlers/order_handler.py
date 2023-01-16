@@ -5,9 +5,10 @@ from aiogram import Bot
 from taxi_bot.load_config import Config
 from taxi_bot.logger import Logger
 from taxi_bot.buttons import keyboard_generator
-
+from aiogram.types import ReplyKeyboardRemove
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
+import re 
 
 class OrderForm(StatesGroup):
     order_id = State()
@@ -52,9 +53,14 @@ class NewOrderFrom(OrderBaseHandler):
         self._db.create_order_message(order_id, passenger_id, message.message_id)
         await self.set_state(state, 'order_id', order_id)
         await OrderForm.location_from.set()
+        # await message.edit_reply_markup(ReplyKeyboardRemove())
+        message = await self._bot.send_message(passenger_id, "msg_text", reply_markup=ReplyKeyboardRemove())
+        await message.delete()
+        # await self._bot.edit_message_reply_markup(passenger_id, message.message_id, reply_markup=ReplyKeyboardRemove()) 
         message = await self._bot.send_message(
             chat_id=passenger_id,
             text="Куда вы хотите ехать?",
+            # reply_markup=ReplyKeyboardRemove(),
             reply_markup=keyboard_generator(self._config.buttons['passenger_cancel'], order_id),
         )
         self._db.create_order_message(order_id, passenger_id, message.message_id)
@@ -84,11 +90,22 @@ class NewOrderPrice(OrderBaseHandler):
         order_id = await self.get_state(state, 'order_id')
         self._db.create_order_message(order_id, passenger_id, message.message_id)
         price = message.text
+        if not re.match('^\d+$', price):
+            message = await self._bot.send_message(
+                chat_id=passenger_id,
+                text="Введите стоимость поездки в рублях (например 250)",
+                reply_markup=keyboard_generator(self._config.buttons['passenger_cancel'], order_id),
+            )
+            self._db.create_order_message(order_id, passenger_id, message.message_id)
+            return
         self._db.update_order_price(order_id, price)
         await state.finish()
+        new_status = 100
+        self._db.update_order(order_id, new_status)
+        available_drivers = self._db.get_available_drivers_count()
         message = await self._bot.send_message(
             chat_id=passenger_id,
-            text="Идет поиск машины...",
+            text=f"Идет поиск машины...\nВодителей на линии: {available_drivers}",
             reply_markup=keyboard_generator(self._config.buttons['passenger_cancel'], order_id),
         )
         self._db.create_order_message(order_id, passenger_id, message.message_id)
@@ -100,7 +117,7 @@ class NewOrderPrice(OrderBaseHandler):
 class DriverAccept(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        order_id = callback_query.data.split('@')[-1]
+        order_id = int(callback_query.data.split('@')[-1])
         driver_id = callback_query.from_user.id
         self._db.update_driver_status(driver_id, 150)
         await self.delete_old_messages(order_id)
@@ -112,11 +129,11 @@ class DriverAccept(OrderBaseHandler):
             reply_markup=keyboard_generator(self._config.buttons['driver_cancel_wait_pick'], order_id),
         )
         self._db.create_order_message(order_id, driver_id, message.message_id)
-        new_status = 200
         driver_info = self._db.get_driver_by_id(driver_id)
         driver_name = driver_info.first_name
         driver_car = driver_info.driver_car
         driver_phone_number = driver_info.phone_number
+        new_status = 200
         passenger_id, _ = self._db.update_order(order_id, new_status, driver_id)
         message = await self._bot.send_message(
             chat_id=passenger_id,
@@ -137,8 +154,7 @@ class DriverRefuse(OrderBaseHandler):
 class DriverWait(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        order_id = callback_query.data.split('@')[-1]
-        print(order_id)
+        order_id = int(callback_query.data.split('@')[-1])
         self._db.update_wait_dt(order_id)
         new_status = 250
         driver_id = callback_query.from_user.id
@@ -151,7 +167,7 @@ class DriverWait(OrderBaseHandler):
 class DriverPick(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        order_id = callback_query.data.split('@')[-1]
+        order_id = int(callback_query.data.split('@')[-1])
         self._db.update_pick_dt(order_id)
         new_status = 300
         driver_id = callback_query.from_user.id
@@ -163,18 +179,8 @@ class DriverPick(OrderBaseHandler):
 
 class DriverComplete(OrderBaseHandler):
 
-    def time_handler(self, dt1, dt2):
-        if dt1 != dt2:
-            dt = (dt1 - dt2).seconds
-            hours = str(dt//3600).zfill(2)
-            minutes = str(dt//60).zfill(2)
-            seconds = str(dt%60).zfill(2)
-            return f"{hours}:{minutes}:{seconds}"
-        return
-        
-
-    async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        order_id = callback_query.data.split('@')[-1]
+    async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
+        order_id = int(callback_query.data.split('@')[-1])
         self._db.update_end_dt(order_id)
         order = self._db.get_order_by_id(order_id)
         dt1 = order.order_dt
@@ -188,25 +194,28 @@ class DriverComplete(OrderBaseHandler):
         add_text = "\n"+"\n".join(add_text)
         new_status = 400
         driver_id = callback_query.from_user.id
+        self._db.driver_complete_trip(driver_id, order.price)
         self._db.update_driver_status(driver_id, 100)
         passenger_id, _ = self._db.update_order(order_id, new_status, driver_id)
         await self.delete_old_messages(order_id)
-        await self._bot.send_message(chat_id=passenger_id, text=f"Поездка завершена (пассажир){add_text}")
+        await self._bot.send_message(chat_id=passenger_id, text=f"Поездка завершена (пассажир){add_text}", reply_markup=self._kbs['passenger_call_taxi'])
         await self._bot.send_message(chat_id=driver_id, text=f"Поездка завершена (водитель){add_text}")
         await self.show_active_orders(driver_id)
         await self._bot.answer_callback_query(callback_query.id)
+        await self.update_state(state, 'total_trips', 1)
+        await self.update_state(state, 'total_income', order.price)
 
 
 class DriverCancel(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        order_id = callback_query.data.split('@')[-1]
+        order_id = int(callback_query.data.split('@')[-1])
         await self.delete_old_messages(order_id)
         new_status = 150
         passenger_id, driver_id = self._db.update_order(order_id, new_status)
         self._db.update_driver_status(driver_id, 100)
         self._db.update_cancel_dt(order_id)
-        await self._bot.send_message(chat_id=passenger_id, text=f"Водитель отменил поездку")
+        await self._bot.send_message(chat_id=passenger_id, text=f"Водитель отменил поездку", reply_markup=self._kbs['passenger_call_taxi'])
         await self._bot.send_message(chat_id=driver_id, text=f"Вы отменили поездку")
         await self.show_active_orders(driver_id)
         await self._bot.answer_callback_query(callback_query.id)
@@ -215,12 +224,12 @@ class DriverCancel(OrderBaseHandler):
 class PassengerCancel(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
-        order_id = callback_query.data.split('@')[-1]
+        order_id = int(callback_query.data.split('@')[-1])
         await self.delete_old_messages(order_id=order_id)
         new_status = 50
         passenger_id, driver_id = self._db.update_order(order_id, new_status)
         self._db.update_cancel_dt(order_id)
-        await self._bot.send_message(chat_id=passenger_id, text=f"Вы отменили поездку")
+        await self._bot.send_message(chat_id=passenger_id, text=f"Вы отменили поездку", reply_markup=self._kbs['passenger_call_taxi'])
         if driver_id:
             await self._bot.send_message(chat_id=driver_id, text=f"Пользователь отменил поездку")
             self._db.update_driver_status(driver_id, 100)

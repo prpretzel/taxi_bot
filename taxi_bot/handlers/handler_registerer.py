@@ -3,21 +3,16 @@ from taxi_bot.database_handler import DataBase
 from taxi_bot.load_config import Config
 from taxi_bot.logger import Logger
 
-
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
-
-
 from taxi_bot.handlers.client import (
     StartHandler, 
     HelpHandler,
-    JobHandler,
     UpdateContact,
     MemberStatus
 )
 
 from taxi_bot.handlers.driver_handler import (
-    DriverForm,
+    DriverJobApplience,
+    JobHandler,
     DriverJob,
     DriverContinueRegistration,
     DriverName,
@@ -73,9 +68,9 @@ def register_handlers(
     # driver handlers
     dp.register_callback_query_handler(DriverJob(*INSTANCES), L('job'))
     dp.register_callback_query_handler(DriverContinueRegistration(*INSTANCES), L('driver_continue_registration'))
-    dp.register_message_handler(DriverName(*INSTANCES), state=DriverForm.name)
-    dp.register_message_handler(DriverCar(*INSTANCES), state=DriverForm.car)
-    dp.register_callback_query_handler(DriverEndRegistration(*INSTANCES), L('driver_continue_registration'), state='*')
+    dp.register_message_handler(DriverName(*INSTANCES), state=DriverJobApplience.name)
+    dp.register_message_handler(DriverCar(*INSTANCES), state=DriverJobApplience.car)
+    dp.register_callback_query_handler(DriverEndRegistration(*INSTANCES), L('driver_continue_registration'), state=DriverJobApplience.driver_id)
     dp.register_callback_query_handler(DriverCancelRegistration(*INSTANCES), L('driver_cancel_registration'), state='*')
     dp.register_callback_query_handler(DriverAccepted(*INSTANCES), L('driver_accepted'))
     dp.register_callback_query_handler(DriverRefused(*INSTANCES), L('driver_refused'))
@@ -97,3 +92,5 @@ def register_handlers(
     dp.register_callback_query_handler(PassengerCancel(*INSTANCES), L('passenger_cancel'), state='*')
     
     logger.info('Handlers are registered')
+
+    
