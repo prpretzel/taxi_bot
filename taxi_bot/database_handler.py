@@ -120,9 +120,9 @@ class DataBase:
             )
             return conn
 
-        engine = create_engine(f"postgresql+pg8000://", creator=getconn)
+        # engine = create_engine(f"postgresql+pg8000://", creator=getconn)
         
-        # engine = create_engine(f"sqlite:///{config.database_path}")
+        engine = create_engine(f"sqlite:///{config.database_path}")
         Base.metadata.create_all(bind=engine)
         Session = sessionmaker(bind=engine)
         self._session = Session()
@@ -151,12 +151,12 @@ class DataBase:
         self._session.commit()
 
     def update_phone_number(self, user_id, phone_number):
-        user: User = self._session.query(User).filter(User.user_id==user_id).first()
+        user = self.get_user_by_id(user_id)
         user.phone_number = phone_number
         self._session.commit()
 
     def create_driver(self, user_id, first_name, driver_car):
-        driver: User = self._session.query(User).filter(User.user_id==user_id).first()
+        driver = self.get_user_by_id(user_id)
         driver.driver_registration_date = datetime.now()
         driver.first_name = first_name
         driver.driver_status = 50
@@ -165,43 +165,66 @@ class DataBase:
         driver.driver_shift_id = 0
         self._session.commit()
 
-    def create_order(self, passenger_id, location_from):
+    def create_order(self, passenger_id, location_from) -> int:
         order_dt = datetime.now()
         new_order = Order(order_dt, passenger_id, location_from)
         self._session.add(new_order)
         self._session.commit()
         return new_order.order_id
 
-    def update_order_location_to(self, order_id, location_to):
+    def update_order_location_to(self, order_id, location_to) -> Order:
         order = self.get_order_by_id(order_id)
+        order.order_status = 90
         order.location_to = location_to
         self._session.commit()
+        return order
 
-    def update_order_price(self, order_id, price):
+    def update_order_price(self, order_id, price) -> Order:
         order = self.get_order_by_id(order_id)
+        order.order_status = 100
         order.price = price
         self._session.commit()
+        return order
 
-    def update_wait_dt(self, order_id):
+    def update_order_driver(self, order_id, driver_id) -> Order:
         order = self.get_order_by_id(order_id)
-        if not order.wait_dt:
-            order.wait_dt = datetime.now()
-            self._session.commit()
+        order.order_status = 200
+        order.driver_id = driver_id
+        self._session.commit()
+        return order
 
-    def update_pick_dt(self, order_id):
+    def update_wait_dt(self, order_id) -> Order:
         order = self.get_order_by_id(order_id)
+        order.order_status = 250
+        order.wait_dt = datetime.now()
+        self._session.commit()
+        return order
+
+    def update_pick_dt(self, order_id) -> Order:
+        order = self.get_order_by_id(order_id)
+        order.order_status = 300
         order.pick_dt = datetime.now()
         self._session.commit()
+        return order
 
-    def update_end_dt(self, order_id):
+    def update_end_dt(self, order_id) -> Order:
         order = self.get_order_by_id(order_id)
+        order.order_status = 400
         order.end_dt = datetime.now()
         self._session.commit()
+        return order
 
-    def update_cancel_dt(self, order_id):
+    def update_cancel_dt(self, order_id) -> Order:
         order = self.get_order_by_id(order_id)
         order.cancel_dt = datetime.now()
         self._session.commit()
+        return order
+
+    def update_order(self, order_id, new_status) -> Order:
+        order = self.get_order_by_id(order_id)
+        order.order_status = new_status
+        self._session.commit()
+        return order
 
     def get_order_by_id(self, order_id) -> Order:
         order = self._session.query(Order).filter(Order.order_id==order_id).first()
@@ -221,7 +244,7 @@ class DataBase:
         self._session.commit()
         
     def delete_order_message(self, log_id):
-        self._session.query(Message).filter(Message.log_id==log_id).delete()
+        self._session.query(Message).filter(Message.log_id.in_(log_id)).delete()
         self._session.commit()
 
     def get_order_messages(self, order_id=None, chat_id=None) -> List[Message]:
@@ -232,53 +255,43 @@ class DataBase:
             messages = messages.filter(Message.chat_id==chat_id)
         return messages.all()
 
-    def update_order(self, order_id, new_status, driver_id=None):
-        order: Order = self._session.query(Order).filter(Order.order_id==order_id).first()
-        order.order_status = new_status
-        if driver_id: order.driver_id = driver_id
-        self._session.commit()
-        return order.passenger_id, order.driver_id
-
-    def get_driver_by_id(self, driver_id):
-        driver: User = self.get_group('Driver').filter(User.user_id==driver_id).first()
-        return driver
-
-    def get_passenger_by_id(self, user_id):
-        driver: User = self.get_group().filter(User.user_id==user_id).first()
-        return driver
+    def get_user_by_id(self, user_id) -> User:
+        return self.get_group().filter(User.user_id==user_id).first()
 
     def update_driver_status(self, driver_id, new_status):
-        driver = self.get_group('Driver').filter(User.user_id==driver_id).first()
+        driver = self.get_user_by_id(driver_id)
         driver.driver_status = new_status
         self._session.commit()
 
-    def get_drivers_id(self, status=None):
+    def get_drivers_id(self, status=None) -> List[int]:
         drivers = self.get_group('Driver').filter(User.active==1)
         if status:
             drivers = drivers.filter(User.driver_status==status)
         drivers = [dr.user_id for dr in drivers.all()]
         return drivers
 
-    def get_available_drivers_count(self):
+    def get_available_drivers_count(self) -> int:
         drivers = self.get_group('Driver').filter(User.active==1).filter(User.driver_status.in_([100,150])).all()
         return len(drivers)
 
-    def get_active_shift_by_driver_id(self, driver_id):
-        driver = self.get_driver_by_id(driver_id)
+    def get_active_shift_by_driver_id(self, driver_id) -> Shift:
+        driver = self.get_user_by_id(driver_id)
         shift_id = driver.driver_shift_id
         shift = self._session.query(Shift).filter(Shift.shift_id==shift_id).first()
         return shift
 
-    def driver_start_shift(self, driver_id):
+    def driver_start_shift(self, driver_id) -> None:
         new_shift = Shift(driver_id)
-        driver: User = self.get_driver_by_id(driver_id)
+        driver: User = self.get_user_by_id(driver_id)
         self._session.add(new_shift)
         self._session.commit()
         driver.driver_shift_id = new_shift.shift_id
         self._session.commit()
 
-    def driver_complete_trip(self, driver_id, income):
+    def driver_complete_trip(self, driver_id, income) -> None:
         shift = self.get_active_shift_by_driver_id(driver_id)
+        driver = self.get_user_by_id(driver_id)
+        driver.driver_status = 100
         shift.total_income += income
         shift.total_trips += 1
         self._session.commit()

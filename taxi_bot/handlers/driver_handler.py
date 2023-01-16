@@ -58,7 +58,7 @@ class JobHandler(DriverBaseHandler):
     async def __call__(self, message: types.Message) -> None:
         user_id = message.from_user.id
         if user_id in self._db.get_drivers_id():
-            driver = self._db.get_driver_by_id(user_id)
+            driver = self._db.get_user_by_id(user_id)
             status = driver.driver_status
             if status in [100,150]:
                 active_shift = self._db.get_active_shift_by_driver_id(user_id)
@@ -198,7 +198,7 @@ class DriverStartWork(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id = callback_query.from_user.id
-        driver = self._db.get_driver_by_id(driver_id)
+        driver = self._db.get_user_by_id(driver_id)
         status = driver.driver_status
         if status in [100,150]:
             text = 'Вы уже на смене'
@@ -215,7 +215,7 @@ class DriverStopWork(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id = callback_query.from_user.id
-        driver = self._db.get_driver_by_id(driver_id)
+        driver = self._db.get_user_by_id(driver_id)
         status = driver.driver_status
         if status==150:
             await self._bot.send_message(chat_id=driver_id, text='Завершите или отмените свой текущий заказ')
