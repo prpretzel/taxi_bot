@@ -14,17 +14,22 @@ class Config:
 
     def __init__(self) -> None:
         with open('config.json', encoding='UTF-8') as f:
-            self._config = json.load(f)
+            self._config: dict = json.load(f)
         with open('credentials.json', encoding='UTF-8') as f:
-            self._creds = json.load(f)
+            self._creds: dict = json.load(f)
         
-        self.API_TOKEN = self._creds['TOKEN']
-        self.PAYMENT_TOKEN = self._creds['PAYMENT_TOKEN']
-        self.ADMIN_ID = self._creds['ADMIN_ID']
-        self.MODER_IDs = self._creds['MODER_IDs']
-        self.messages = self._config['messages']
-        self.buttons = self._config['buttons']
-        self.database_path = self._config['database_path']
+        self.API_TOKEN = self._creds.get('TOKEN')
+        self.PAYMENT_TOKEN = self._creds.get('PAYMENT_TOKEN')
+        self.ADMIN_ID = self._creds.get('ADMIN_ID')
+        self.MODER_IDs = self._creds.get('MODER_IDs')
+        self.GCLOUD_CREDS_PATH = self._creds.get('GCLOUD_CREDS_PATH')
+        self.INSTANCE_CONNECTION_NAME = self._creds.get('INSTANCE_CONNECTION_NAME')
+        self.DB_USER = self._creds.get('DB_USER')
+        self.DB_PASS = self._creds.get('DB_PASS')
+        self.DB_NAME = self._creds.get('DB_NAME')
+        self.messages = self._config.get('messages')
+        self.buttons = self._config.get('buttons')
+        self.database_path = self._config.get('database_path')
 
     def __repr__(self):
         

@@ -133,3 +133,4 @@ database
 log.log
 connect_gcp.sh
 test.ipynb
+taxi_bot_gcloud_creds.json
