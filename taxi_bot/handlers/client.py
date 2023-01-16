@@ -5,16 +5,18 @@ from taxi_bot.handlers.base_handler import BaseHandler
 class StartHandler(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
-        user_id = message.from_user.id
-        username = message.from_user.username
-        first_name = message.from_user.first_name
-        last_name = message.from_user.last_name
-        self._db.create_user(user_id, username, first_name, last_name, '')
+        if not await self._db.create_user(message, self._bot, self._kbs):
+            return
+        # await self._bot.send_message(
+        #     chat_id=message.from_user.id,
+        #     text=self._config.messages['welcome_message'],
+        #     reply_markup=self._kbs['request_contact']
+        # )
 
         await self._bot.send_message(
-            chat_id=user_id,
-            text=self._config.messages['welcome_message'],
-            reply_markup=self._kbs['request_contact']
+            chat_id=message.from_user.id,
+            text=self._config.messages['call_taxi_message'],
+            reply_markup=self._kbs['passenger_call_taxi']
         )
         self._logger.info(self, message.from_user.id, 'User start')
 

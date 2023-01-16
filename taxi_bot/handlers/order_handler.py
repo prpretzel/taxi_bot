@@ -32,7 +32,9 @@ class OrderBaseHandler(BaseHandler):
 
 class NewOrderFrom(OrderBaseHandler):
 
-    async def __call__(self, message: types.Location, state:FSMContext) -> None:
+    async def __call__(self, message: types.Location, state:FSMContext) -> None: 
+        if not await self._db.create_user(message, self._bot, self._kbs):
+            return
         passenger_id = message.from_user.id
         active_order = self._db.get_user_active_order(passenger_id)
         if active_order:
@@ -112,8 +114,10 @@ class NewOrderPrice(OrderBaseHandler):
 class DriverAccept(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        order_id = int(callback_query.data.split('@')[-1])
+        if not await self._db.create_user(callback_query, self._bot, self._kbs):
+            return
         driver_id = callback_query.from_user.id
+        order_id = int(callback_query.data.split('@')[-1])
         self._db.update_driver_status(driver_id, 150)
         await self.delete_old_messages(chat_id=driver_id)
         order = self._db.get_order_by_id(order_id)

@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from typing import List, Tuple
 from taxi_bot.load_config import Config
+from aiogram import types
 config = Config()
 
 
@@ -16,8 +17,8 @@ class User(Base):
     first_name = Column('first_name', String)
     last_name = Column('last_name', String)
     phone_number = Column('phone_number', String)
-    user_registration_date = Column('user_registration_date', String)
-    driver_registration_date = Column('driver_registration_date', String)
+    user_registration_date = Column('user_registration_date', DateTime)
+    driver_registration_date = Column('driver_registration_date', DateTime)
     active = Column('active', Integer)
     driver_status = Column('driver_status', Integer)
     driver_car = Column('driver_car', String)
@@ -30,17 +31,14 @@ class User(Base):
             user_id, 
             username, 
             first_name, 
-            last_name, 
-            phone_number, 
-            user_registration_date
+            last_name
         ):
         self.user_id = user_id
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
-        self.phone_number = phone_number
         self.active = 1
-        self.user_registration_date = user_registration_date
+        self.user_registration_date = datetime.now()
 
     
 class Order(Base):
@@ -140,15 +138,31 @@ class DataBase:
         user.active = activity_status
         self._session.commit()
 
-    def create_user(self, user_id, username, first_name, last_name, phone_number):
+    async def create_user(self, message: types.Message, bot, kbs):
+        user_id = message.from_user.id
+        username = message.from_user.username
+        first_name = message.from_user.first_name
+        last_name = message.from_user.last_name
         user: User = self._session.query(User).filter(User.user_id==user_id).first()
         if not user:
-            registration_date = datetime.now()
-            new_passenger = User(user_id, username, first_name, last_name, phone_number, registration_date)
+            new_passenger = User(user_id, username, first_name, last_name)
             self._session.add(new_passenger)
         else:
             user.active = 1
         self._session.commit()
+        if not self.check_user_phone_number(user_id):
+            message = await bot.send_message(
+                chat_id=user_id,
+                text="Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт'",
+                reply_markup=kbs['request_contact']
+            )
+            self.create_order_message(-1, user_id, message.message_id)
+            return
+        return True
+
+    def check_user_phone_number(self, user_id):
+        user = self.get_user_by_id(user_id)
+        return bool(user.phone_number)
 
     def update_phone_number(self, user_id, phone_number):
         user = self.get_user_by_id(user_id)
