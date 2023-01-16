@@ -82,11 +82,18 @@
         {"data":"passenger_cancel", "text":"Отменить заказ"}
       ]
     },
-    "driver_cancel_wait_pick" : {
+    "driver_cancel_wait" : {
       "type" : "inline",
-      "layout" : [2,1],
+      "layout" : [2],
       "buttons" : [
         {"data":"driver_wait", "text":"Ожидаю Пассажира"},
+        {"data":"driver_cancel", "text":"Отменить заказ"}
+      ]
+    },
+    "driver_cancel_pick" : {
+      "type" : "inline",
+      "layout" : [2],
+      "buttons" : [
         {"data":"driver_pick", "text":"Забрал Пассажира"},
         {"data":"driver_cancel", "text":"Отменить заказ"}
       ]
