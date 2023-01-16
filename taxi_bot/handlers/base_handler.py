@@ -30,10 +30,20 @@ class BaseHandler:
         async with state.proxy() as data:
             data[field] = value
 
+    async def update_state(self, state, field, value):
+        try:
+            async with state.proxy() as data:
+                data[field] = data[field] + value
+        except KeyError:
+            return 
+
     async def get_state(self, state, field):
-        async with state.proxy() as data:
-            value = data[field]
-        return value
+        try:
+            async with state.proxy() as data:
+                value = data[field]
+            return value
+        except KeyError:
+            return 
 
     async def show_order(self, order, driver_id, keyboard=True):
         lat, lon = order.location_from.split('|')
@@ -74,3 +84,12 @@ class BaseHandler:
             except:
                 pass
             self._db.delete_order_message(log_id)
+
+    def time_handler(self, dt1, dt2):
+        if dt1 != dt2:
+            dt = (dt1 - dt2).seconds
+            hours = str(dt//3600).zfill(2)
+            minutes = str(dt%3600//60).zfill(2)
+            seconds = str(dt%60).zfill(2)
+            return f"{hours}:{minutes}:{seconds}"
+        return
