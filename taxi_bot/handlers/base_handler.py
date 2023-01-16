@@ -77,19 +77,21 @@ class BaseHandler:
             orders = self._db.get_order_messages(order_id=order_id)
         if chat_id:
             orders = self._db.get_order_messages(chat_id=chat_id)
+        log_ids = list()
         for order in orders:
             log_id, chat_id, message_id = order.log_id, order.chat_id, order.message_id
             try:
                 await self._bot.delete_message(chat_id, message_id)
             except:
                 pass
-            self._db.delete_order_message(log_id)
+            log_ids.append(log_id)
+        self._db.delete_order_message(log_ids)
 
     def time_handler(self, dt1, dt2):
-        if dt1 != dt2:
-            dt = (dt1 - dt2).seconds
-            hours = str(dt//3600).zfill(2)
-            minutes = str(dt%3600//60).zfill(2)
-            seconds = str(dt%60).zfill(2)
-            return f"{hours}:{minutes}:{seconds}"
-        return
+        if dt1 == dt2:
+            return
+        dt = (dt1 - dt2).seconds
+        hours = str(dt//3600).zfill(2)
+        minutes = str(dt%3600//60).zfill(2)
+        seconds = str(dt%60).zfill(2)
+        return f"{hours}:{minutes}:{seconds}"
