@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, ForeignKey, Column, String, Integer, DateTime, Boolean, Identity, func
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, Identity, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 from sqlalchemy.orm import sessionmaker
@@ -12,7 +12,7 @@ config = Config()
 class User(Base):
     __tablename__ = 'users'
 
-    user_id = Column('user_id', Integer, primary_key=True)
+    user_id = Column('user_id', BigInteger, primary_key=True)
     username = Column('username', String)
     first_name = Column('first_name', String)
     last_name = Column('last_name', String)
@@ -50,8 +50,8 @@ class Order(Base):
     pick_dt = Column('pick_dt', DateTime)
     end_dt = Column('end_dt', DateTime)
     cancel_dt = Column('cancel_dt', DateTime)
-    passenger_id = Column('passenger_id', Integer)
-    driver_id = Column('driver_id', Integer)
+    passenger_id = Column('passenger_id', BigInteger)
+    driver_id = Column('driver_id', BigInteger)
     location_from = Column('location_from', String)
     location_to = Column('location_to', String)
     price = Column('price', Integer)
@@ -70,7 +70,7 @@ class Message(Base):
 
     log_id = Column('log_id', Integer, Identity(), primary_key=True)
     order_id = Column('order_id', Integer)
-    chat_id = Column('chat_id', Integer)
+    chat_id = Column('chat_id', BigInteger)
     message_id = Column('message_id', Integer)
 
 
@@ -84,7 +84,7 @@ class Shift(Base):
     __tablename__ = 'shifts'
 
     shift_id = Column('shift_id', Integer, Identity(), primary_key=True)
-    driver_id = Column('driver_id', Integer)
+    driver_id = Column('driver_id', BigInteger)
     shift_start = Column('shift_start', DateTime)
     shift_end = Column('shift_end', DateTime)
     total_trips = Column('total_trips', Integer)
