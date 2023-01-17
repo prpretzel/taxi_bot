@@ -45,6 +45,18 @@ class BaseHandler:
         except KeyError:
             return 
 
+    async def create_user(self, message):
+        phone_number = self._db.create_user(message)
+        if not phone_number:
+            user_id = message.from_user.id
+            message = await self._bot.send_message(
+                chat_id=user_id,
+                text="Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт'",
+                reply_markup=self._kbs['request_contact']
+            )
+            self._db.create_order_message(-1, user_id, message.message_id)
+        return phone_number
+
     async def show_order(self, order, driver_id, keyboard=True):
         lat, lon = order.location_from.split('|')
         order_id = order.order_id

@@ -114,7 +114,6 @@ class DataBase:
                 user= config.DB_USER,
                 password=config.DB_PASS,
                 db=config.DB_NAME,
-                
             )
             return conn
 
@@ -138,27 +137,19 @@ class DataBase:
         user.active = activity_status
         self._session.commit()
 
-    async def create_user(self, message: types.Message, bot, kbs):
+    def create_user(self, message: types.Message):
         user_id = message.from_user.id
-        username = message.from_user.username
-        first_name = message.from_user.first_name
-        last_name = message.from_user.last_name
-        user: User = self._session.query(User).filter(User.user_id==user_id).first()
+        user = self.get_user_by_id(user_id)
         if not user:
+            username = message.from_user.username
+            first_name = message.from_user.first_name
+            last_name = message.from_user.last_name
             new_passenger = User(user_id, username, first_name, last_name)
             self._session.add(new_passenger)
         else:
             user.active = 1
         self._session.commit()
-        if not self.check_user_phone_number(user_id):
-            message = await bot.send_message(
-                chat_id=user_id,
-                text="Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт'",
-                reply_markup=kbs['request_contact']
-            )
-            self.create_order_message(-1, user_id, message.message_id)
-            return
-        return True
+        return self.check_user_phone_number(user_id)
 
     def check_user_phone_number(self, user_id):
         user = self.get_user_by_id(user_id)

@@ -5,13 +5,8 @@ from taxi_bot.handlers.base_handler import BaseHandler
 class StartHandler(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
-        if not await self._db.create_user(message, self._bot, self._kbs):
+        if not await self.create_user(message):
             return
-        # await self._bot.send_message(
-        #     chat_id=message.from_user.id,
-        #     text=self._config.messages['welcome_message'],
-        #     reply_markup=self._kbs['request_contact']
-        # )
 
         await self._bot.send_message(
             chat_id=message.from_user.id,

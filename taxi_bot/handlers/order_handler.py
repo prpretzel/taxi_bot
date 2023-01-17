@@ -33,7 +33,7 @@ class OrderBaseHandler(BaseHandler):
 class NewOrderFrom(OrderBaseHandler):
 
     async def __call__(self, message: types.Location, state:FSMContext) -> None: 
-        if not await self._db.create_user(message, self._bot, self._kbs):
+        if not await self.create_user(message):
             return
         passenger_id = message.from_user.id
         active_order = self._db.get_user_active_order(passenger_id)
@@ -114,7 +114,7 @@ class NewOrderPrice(OrderBaseHandler):
 class DriverAccept(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        if not await self._db.create_user(callback_query, self._bot, self._kbs):
+        if not await self.create_user(callback_query):
             return
         driver_id = callback_query.from_user.id
         order_id = int(callback_query.data.split('@')[-1])
