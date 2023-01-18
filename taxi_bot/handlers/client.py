@@ -30,7 +30,7 @@ class MemberStatus(BaseHandler):
 
     async def __call__(self, update: types.ChatMemberUpdated) -> None:
         user_id = update.from_user.id
-        activity_status = update.new_chat_member.is_chat_member()
+        activity_status = int(update.new_chat_member.is_chat_member())
         self._db.update_activity(user_id, activity_status)
         self._logger.info(self, update.from_user.id, 'User Member')
         
