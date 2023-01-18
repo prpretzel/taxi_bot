@@ -56,6 +56,8 @@ class DriverBaseHandler(BaseHandler):
 class JobHandler(DriverBaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
+        if not await self.create_user(message):
+            return
         user_id = message.from_user.id
         if user_id in self._db.get_drivers_id():
             driver = self._db.get_user_by_id(user_id)
