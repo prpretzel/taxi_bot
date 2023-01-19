@@ -126,9 +126,9 @@ class DataBase:
             )
             return conn
 
-        # engine = create_engine(f"postgresql+pg8000://", creator=getconn)
+        engine = create_engine(f"postgresql+pg8000://", creator=getconn)
         
-        engine = create_engine(f"sqlite:///{config.database_path}")
+        # engine = create_engine(f"sqlite:///{config.database_path}")
         Base.metadata.create_all(bind=engine)
         Session = sessionmaker(bind=engine)
         self._session = Session()
