@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, Identity, BigInteger
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, Identity, BigInteger, JSON
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 from sqlalchemy.orm import sessionmaker
@@ -58,26 +58,11 @@ class Order(Base):
     order_status = Column('order_status', Integer)
 
 
-    def __init__(self, order_dt, passenger_id, location_from):
-        self.order_dt = order_dt
+    def __init__(self, passenger_id, location_from):
+        self.order_dt = datetime.now()
         self.passenger_id = passenger_id
         self.location_from = location_from
         self.order_status = 80
-
-
-class Message(Base):
-    __tablename__ = 'messages'
-
-    log_id = Column('log_id', Integer, Identity(), primary_key=True)
-    order_id = Column('order_id', Integer)
-    chat_id = Column('chat_id', BigInteger)
-    message_id = Column('message_id', Integer)
-
-
-    def __init__(self, order_id, chat_id, message_id):
-        self.order_id = order_id
-        self.chat_id = chat_id
-        self.message_id = message_id
 
 
 class Shift(Base):
@@ -96,6 +81,30 @@ class Shift(Base):
         self.shift_start = datetime.now()
         self.total_income = 0
         self.total_trips = 0
+
+
+class Log_Message(Base):
+    __tablename__ = 'logs'
+
+    log_id = Column('log_id', Integer, Identity(), primary_key=True)
+    date_time = Column('date_time', DateTime)
+    level = Column('level', String)
+    chat_id = Column('chat_id', BigInteger)
+    message_id = Column('message_id', Integer)
+    order_id = Column('order_id', Integer)
+    source = Column('source', String)
+    message = Column('message', String)
+    shown = Column('shown', Integer)
+
+    def __init__(self, level, chat_id, message_id, order_id, source, message, shown):
+        self.date_time = datetime.now()
+        self.level = level
+        self.chat_id = chat_id
+        self.message_id = message_id
+        self.order_id = order_id
+        self.source = source
+        self.message = message
+        self.shown = shown
 
 
 class DataBase:
@@ -117,12 +126,24 @@ class DataBase:
             )
             return conn
 
-        engine = create_engine(f"postgresql+pg8000://", creator=getconn)
+        # engine = create_engine(f"postgresql+pg8000://", creator=getconn)
         
-        # engine = create_engine(f"sqlite:///{config.database_path}")
+        engine = create_engine(f"sqlite:///{config.database_path}")
         Base.metadata.create_all(bind=engine)
         Session = sessionmaker(bind=engine)
         self._session = Session()
+
+    def log_message(self, level, chat_id, message_id, order_id, _self, message, shown):
+        source = _self.__class__.__name__
+        log = Log_Message(level, chat_id, message_id, order_id, source, message, shown)
+        self._session.add(log)
+        self._session.commit()
+
+    def update_log_status(self, log_ids):
+        log_messages: List[Log_Message] = self._session.query(Log_Message).filter(Log_Message.log_id.in_(log_ids)).all()
+        for log_message in log_messages:
+            log_message.shown = 0
+        self._session.commit()
 
     def get_group(self, group=None):
         if group=='Passenger':
@@ -133,7 +154,7 @@ class DataBase:
             return self._session.query(User)
 
     def update_activity(self, user_id, activity_status):
-        user: User = self.get_group().filter(User.user_id==user_id).first()
+        user = self.get_user_by_id(user_id)
         user.active = activity_status
         self._session.commit()
 
@@ -152,8 +173,7 @@ class DataBase:
         return self.check_user_phone_number(user_id)
 
     def check_user_phone_number(self, user_id):
-        user = self.get_user_by_id(user_id)
-        return bool(user.phone_number)
+        return bool(self.get_user_by_id(user_id).phone_number)
 
     def update_phone_number(self, user_id, phone_number):
         user = self.get_user_by_id(user_id)
@@ -171,8 +191,7 @@ class DataBase:
         self._session.commit()
 
     def create_order(self, passenger_id, location_from) -> int:
-        order_dt = datetime.now()
-        new_order = Order(order_dt, passenger_id, location_from)
+        new_order = Order(passenger_id, location_from)
         self._session.add(new_order)
         self._session.commit()
         return new_order.order_id
@@ -239,25 +258,16 @@ class DataBase:
         order = self._session.query(Order).filter(Order.order_status==status).all()
         return order
 
-    def get_user_active_order(self, user_id):
+    def get_user_active_order(self, user_id) -> Order:
         statuses = [100,200,250,300]
         return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status.in_(statuses)).first()
 
-    def create_order_message(self, order_id, user_id, message_id):
-        new_message_order = Message(order_id, user_id, message_id)
-        self._session.add(new_message_order)
-        self._session.commit()
-        
-    def delete_order_message(self, log_id):
-        self._session.query(Message).filter(Message.log_id.in_(log_id)).delete()
-        self._session.commit()
-
-    def get_order_messages(self, order_id=None, chat_id=None) -> List[Message]:
-        messages = self._session.query(Message)
+    def get_order_messages(self, order_id=None, chat_id=None) -> List[Log_Message]:
+        messages = self._session.query(Log_Message).filter(Log_Message.shown==1)
         if order_id:
-            messages = messages.filter(Message.order_id==order_id)
+            messages = messages.filter(Log_Message.order_id==order_id)
         if chat_id:
-            messages = messages.filter(Message.chat_id==chat_id)
+            messages = messages.filter(Log_Message.chat_id==chat_id)
         return messages.all()
 
     def get_user_by_id(self, user_id) -> User:
@@ -287,7 +297,7 @@ class DataBase:
 
     def driver_start_shift(self, driver_id) -> None:
         new_shift = Shift(driver_id)
-        driver: User = self.get_user_by_id(driver_id)
+        driver = self.get_user_by_id(driver_id)
         self._session.add(new_shift)
         self._session.commit()
         driver.driver_shift_id = new_shift.shift_id

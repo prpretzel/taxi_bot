@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from aiogram import Bot
+from aiogram import types
 from taxi_bot.database_handler import DataBase
 from taxi_bot.load_config import Config
 from taxi_bot.logger import Logger
@@ -47,57 +48,43 @@ class BaseHandler:
 
     async def create_user(self, message):
         phone_number = self._db.create_user(message)
+        chat_id = message.from_user.id
         if not phone_number:
-            user_id = message.from_user.id
-            message = await self._bot.send_message(
-                chat_id=user_id,
-                text="Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт'",
-                reply_markup=self._kbs['request_contact']
-            )
-            self._db.create_order_message(-1, user_id, message.message_id)
+            text = "Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт'"
+            await self.send_message(chat_id, -1, text, 'request_contact')
         return phone_number
 
-    async def show_order(self, order, driver_id, keyboard=True):
+    async def show_order(self, order, chat_id, keyboard=True):
         lat, lon = order.location_from.split('|')
         order_id = order.order_id
         title = order.location_to
         address = f"{order.price} рублей"
-        keyboard = keyboard_generator(self._config.buttons['driver_accept_refuse'], order_id) if keyboard else None
-        message = await self._bot.send_venue(
-            chat_id=driver_id,
-            latitude=lat,
-            longitude=lon,
-            title=title,
-            address=address,
-            reply_markup=keyboard,
+        await self.send_venue(
+            chat_id=chat_id,
+            lat=lat, 
+            lon=lon, 
+            destination=title,
+            price=address,
+            order_id=order_id,
+            kb_name=keyboard
         )
-        self._db.create_order_message(order_id, driver_id, message.message_id)
 
     async def show_active_orders(self, driver_id):
         active_orders = self._db.get_orders(100)
-        if active_orders:
-            message = await self._bot.send_message(
-                chat_id=driver_id,
-                text=f'Новые заказы:'
-            )
-            self._db.create_order_message(-1, driver_id, message.message_id)
+        text = 'Новые заказы:' if active_orders else 'Новых заказов нет'
+        await self.send_message(driver_id, -1, text)
         for order in active_orders:
             await self.show_order(order, driver_id)
 
     async def delete_old_messages(self, order_id=None, chat_id=None):
-        if order_id:
-            orders = self._db.get_order_messages(order_id=order_id)
-        if chat_id:
-            orders = self._db.get_order_messages(chat_id=chat_id)
-        log_ids = list()
+        orders = self._db.get_order_messages(order_id=order_id, chat_id=chat_id)
         for order in orders:
-            log_id, chat_id, message_id = order.log_id, order.chat_id, order.message_id
+            chat_id, message_id, order_id = order.chat_id, order.message_id, order.order_id
             try:
                 await self._bot.delete_message(chat_id, message_id)
             except:
-                pass
-            log_ids.append(log_id)
-        self._db.delete_order_message(log_ids)
+                self.log_error(chat_id, message_id, order_id, self, f'can`t delete chat_id: {chat_id} message_id: {message_id}')
+        self._db.update_log_status(log_ids=[order.log_id for order in orders])
 
     def time_handler(self, dt1, dt2):
         if dt1 == dt2:
@@ -107,3 +94,48 @@ class BaseHandler:
         minutes = str(dt%3600//60).zfill(2)
         seconds = str(dt%60).zfill(2)
         return f"{hours}:{minutes}:{seconds}"
+    
+    async def send_message(self, chat_id, order_id, text, kb_name=None):
+        kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
+        message = await self._bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=kb,
+            parse_mode='html'
+        )
+        self.log_message(chat_id, message.message_id, order_id, self, f'text: {text}')
+        return message
+
+    async def edit_reply_markup(self, callback_query: types.CallbackQuery, kb_name, order_id):
+        chat_id = callback_query.from_user.id
+        message = await callback_query.message.edit_reply_markup(keyboard_generator(self._config.buttons[kb_name], order_id))
+        self.log_info(chat_id, message.message_id, order_id, self, f'edit_kb: {kb_name}')
+
+    async def remove_reply_markup(self, query, order_id):
+        chat_id = query.from_user.id
+        if isinstance(query, types.Message):
+            message = await query.delete_reply_markup()
+        elif isinstance(query, types.CallbackQuery):
+            message = await query.message.delete_reply_markup()
+        self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
+
+    async def send_venue(self, chat_id, lat, lon, destination, price, order_id, kb_name=None):
+        kb = keyboard_generator(self._config.buttons['driver_accept_refuse'], order_id) if kb_name else None
+        message = await self._bot.send_venue(
+            chat_id=chat_id,
+            latitude=lat,
+            longitude=lon,
+            title=destination,
+            address=price,
+            reply_markup=kb,
+        )
+        self.log_message(chat_id, message.message_id, order_id, self, f'lat: {lat}; lon: {lon} dest: {destination}; price: {price}')
+    
+    def log_info(self, chat_id, message_id, order_id, _self, message):
+        self._db.log_message('INFO', chat_id, message_id, order_id, _self, message, 0)
+    
+    def log_message(self, chat_id, message_id, order_id, _self, message):
+        self._db.log_message('MESSAGE', chat_id, message_id, order_id, _self, message, 1)
+    
+    def log_error(self, chat_id, message_id, order_id, _self, message):
+        self._db.log_message('ERROR', chat_id, message_id, order_id, _self, message, 0)
