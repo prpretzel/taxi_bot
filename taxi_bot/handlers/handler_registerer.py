@@ -41,6 +41,10 @@ from taxi_bot.handlers.order_handler import (
     DriverComplete
 )
 
+from taxi_bot.handlers.admin_menu import (
+    AdminMenu,
+    DriversStatus
+)
 
 def register_handlers(
         db: DataBase, 
@@ -57,6 +61,10 @@ def register_handlers(
     def L(startswith):
         return lambda c: c.data.startswith(startswith)
     
+    # admin/moder menu
+    dp.register_message_handler(AdminMenu(*INSTANCES), ADMIN_COND, commands=['help'])
+    dp.register_callback_query_handler(DriversStatus(*INSTANCES), ADMIN_COND, L('drivers_status'))
+
     # main handlers
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['start'])
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['restart'])
@@ -90,7 +98,7 @@ def register_handlers(
     dp.register_callback_query_handler(DriverComplete(*INSTANCES), L('driver_complete'))
     dp.register_callback_query_handler(DriverCancel(*INSTANCES), L('driver_cancel'))
     dp.register_callback_query_handler(PassengerCancel(*INSTANCES), L('passenger_cancel'), state='*')
-    
+
     logger.info('Handlers are registered')
 
     
