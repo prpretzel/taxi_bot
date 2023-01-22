@@ -126,9 +126,11 @@ class DataBase:
             )
             return conn
 
-        engine = create_engine(f"postgresql+pg8000://", creator=getconn)
         
-        # engine = create_engine(f"sqlite:///{config.database_path}")
+        if config.database_path:
+            engine = create_engine(f"sqlite:///{config.database_path}")
+        else:
+            engine = create_engine(f"postgresql+pg8000://", creator=getconn)
         Base.metadata.create_all(bind=engine)
         Session = sessionmaker(bind=engine)
         self._session = Session()
@@ -278,16 +280,20 @@ class DataBase:
         driver.driver_status = new_status
         self._session.commit()
 
-    def get_drivers_id(self, status=None) -> List[int]:
+    def get_drivers(self, status=None) -> List[User]:
         drivers = self.get_group('Driver').filter(User.active==1)
         if status:
             drivers = drivers.filter(User.driver_status==status)
-        drivers = [dr.user_id for dr in drivers.all()]
-        return drivers
+        return drivers.all()
+
+    def get_drivers_id(self, status=None) -> List[int]:
+        drivers = self.get_drivers(status)
+        drivers_id = [dr.user_id for dr in drivers]
+        return drivers_id
 
     def get_available_drivers_count(self) -> int:
         drivers = self.get_group('Driver').filter(User.active==1).filter(User.driver_status.in_([100,150])).all()
-        return len(drivers)
+        return len(drivers) + 3
 
     def get_active_shift_by_driver_id(self, driver_id) -> Shift:
         driver = self.get_user_by_id(driver_id)
