@@ -43,3 +43,9 @@ class UpdateContact(BaseHandler):
         text=self._config.messages['call_taxi_message']
         kb_name='passenger_call_taxi'
         await self.send_message(chat_id, -1, text, kb_name)
+        
+
+class HideMessage(BaseHandler):
+
+    async def __call__(self, callback_query: types.CallbackQuery) -> None:
+        await self.delete_old_messages(message_id=callback_query.message.message_id)
