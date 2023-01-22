@@ -7,6 +7,7 @@ class StartHandler(BaseHandler):
     async def __call__(self, message: types.Message) -> None:
         chat_id = message.from_user.id
         self.log_message(chat_id, message.message_id, -1, self, 'start_command')
+        await self.send_message(chat_id, -1, self._config.messages['welcome_message'])
         if not await self.create_user(message):
             return
         text = self._config.messages['call_taxi_message']
