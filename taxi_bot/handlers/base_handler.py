@@ -54,7 +54,7 @@ class BaseHandler:
             await self.send_message(chat_id, -1, text, 'request_contact')
         return phone_number
 
-    async def show_order(self, order, chat_id, keyboard=True):
+    async def show_order(self, order, chat_id, kb_name=None):
         lat, lon = order.location_from.split('|')
         order_id = order.order_id
         title = order.location_to
@@ -66,7 +66,7 @@ class BaseHandler:
             destination=title,
             price=address,
             order_id=order_id,
-            kb_name=keyboard
+            kb_name=kb_name
         )
 
     async def show_active_orders(self, driver_id):
@@ -74,10 +74,10 @@ class BaseHandler:
         text = 'Новые заказы:' if active_orders else 'Новых заказов нет'
         await self.send_message(driver_id, -1, text)
         for order in active_orders:
-            await self.show_order(order, driver_id)
+            await self.show_order(order, driver_id, 'driver_accept_refuse')
 
-    async def delete_old_messages(self, order_id=None, chat_id=None):
-        orders = self._db.get_order_messages(order_id=order_id, chat_id=chat_id)
+    async def delete_old_messages(self, order_id=None, chat_id=None, message_id=None):
+        orders = self._db.get_order_messages(order_id=order_id, chat_id=chat_id, message_id=message_id)
         for order in orders:
             chat_id, message_id, order_id = order.chat_id, order.message_id, order.order_id
             try:
@@ -120,7 +120,7 @@ class BaseHandler:
         self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
 
     async def send_venue(self, chat_id, lat, lon, destination, price, order_id, kb_name=None):
-        kb = keyboard_generator(self._config.buttons['driver_accept_refuse'], order_id) if kb_name else None
+        kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
         message = await self._bot.send_venue(
             chat_id=chat_id,
             latitude=lat,
