@@ -125,13 +125,16 @@ class DataBase:
                 db=config.DB_NAME,
             )
             return conn
-
         
+        # from sqlalchemy.ext.asyncio import create_async_engine as create_engine
+        # from sqlalchemy.ext.asyncio import AsyncSession
+
         if config.database_path:
-            engine = create_engine(f"sqlite:///{config.database_path}")
+            engine = create_engine(f"sqlite:///{config.database_path}", echo=True)
         else:
-            engine = create_engine(f"postgresql+pg8000://", creator=getconn)
+            engine = create_engine(f"postgresql+pg8000://", creator=getconn, echo=True)
         Base.metadata.create_all(bind=engine)
+        # Session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
         Session = sessionmaker(bind=engine)
         self._session = Session()
 
@@ -148,12 +151,13 @@ class DataBase:
         self._session.commit()
 
     def get_group(self, group=None):
+        users = self._session.query(User).filter(User.active==1)
         if group=='Passenger':
-            return self._session.query(User).filter(User.driver_status==0)
+            return users.filter(User.driver_status.is_(None))
         elif group=='Driver':
-            return self._session.query(User).filter(User.driver_status!=0)
+            return users.filter(User.driver_status!=0)
         else:
-            return self._session.query(User)
+            return users
 
     def update_activity(self, user_id, activity_status):
         user = self.get_user_by_id(user_id)
@@ -213,7 +217,14 @@ class DataBase:
         return order
 
     def update_order_driver(self, order_id, driver_id) -> Order:
+        print(driver_id, '-'*60)
         order = self.get_order_by_id(order_id)
+        print(driver_id, '-'*60)
+        driver_id = order.driver_id
+        print(driver_id, '-'*60)
+        if driver_id:
+            return
+        print(driver_id, '-'*60)
         order.order_status = 200
         order.driver_id = driver_id
         self._session.commit()
@@ -264,12 +275,14 @@ class DataBase:
         statuses = [100,200,250,300]
         return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status.in_(statuses)).first()
 
-    def get_order_messages(self, order_id=None, chat_id=None) -> List[Log_Message]:
+    def get_order_messages(self, order_id, chat_id, message_id) -> List[Log_Message]:
         messages = self._session.query(Log_Message).filter(Log_Message.shown==1)
         if order_id:
             messages = messages.filter(Log_Message.order_id==order_id)
         if chat_id:
             messages = messages.filter(Log_Message.chat_id==chat_id)
+        if message_id:
+            messages = messages.filter(Log_Message.message_id==message_id)
         return messages.all()
 
     def get_user_by_id(self, user_id) -> User:
@@ -290,6 +303,10 @@ class DataBase:
         drivers = self.get_drivers(status)
         drivers_id = [dr.user_id for dr in drivers]
         return drivers_id
+
+    def get_drivers_active_order(self, driver_id) -> Order:
+        order = self._session.query(Order).filter(Order.driver_id==driver_id).filter(Order.order_status.in_([200,250,300])).first()
+        return order
 
     def get_available_drivers_count(self) -> int:
         drivers = self.get_group('Driver').filter(User.active==1).filter(User.driver_status.in_([100,150])).all()
