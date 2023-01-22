@@ -137,7 +137,7 @@ class DriverEndRegistration(DriverBaseHandler):
         text = f'Заявка оставлена. Ожидайте подтверждения администратора.'
         await self.send_message(chat_id, -1, text)
         text = '\n'.join([
-            f'Новый водитель: <a href="tg://user?id={chat_id}">{name}</a> \n'
+            f'Новый водитель: {self.tg_user_link(chat_id, name)} \n'
             f'Машина: {car} ',
             f'{chat_id}@{name}@{car}'
         ])

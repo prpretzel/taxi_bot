@@ -50,7 +50,7 @@ class BaseHandler:
         phone_number = self._db.create_user(message)
         chat_id = message.from_user.id
         if not phone_number:
-            text = "Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт'"
+            text = "Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт', чтобы водители могли позвонить Вам для уточнения информации по вашему заказу."
             await self.send_message(chat_id, -1, text, 'request_contact')
         return phone_number
 
@@ -139,3 +139,6 @@ class BaseHandler:
     
     def log_error(self, chat_id, message_id, order_id, _self, message):
         self._db.log_message('ERROR', chat_id, message_id, order_id, _self, message, 0)
+
+    def tg_user_link(self, chat_id, first_name):
+        return f'<a href="tg://user?id={chat_id}">{first_name}</a>'
