@@ -107,9 +107,35 @@
     },
     "admin_menu" : {
       "type" : "inline",
+      "layout" : [2],
+      "buttons" : [
+        {"data":"drivers_status", "text":"Статус Водителей"},
+        {"data":"invite_broadcast", "text":"Разослать Сообщение"}
+      ]
+    },
+    "broadcast_message" : {
+      "type" : "inline",
+      "layout" : [2,2,1],
+      "buttons" : [
+        {"data":"broadcast@Driver", "text":"Водителям"},
+        {"data":"broadcast@Passenger", "text":"Пассажирам"},
+        {"data":"broadcast@All", "text":"Всем"},
+        {"data":"broadcast@Moders", "text":"Модераторам"},
+        {"data":"cancel_broadcast", "text":"Отмена"}
+      ]
+    },
+    "broadcast_cancel" : {
+      "type" : "inline",
       "layout" : [1],
       "buttons" : [
-        {"data":"drivers_status", "text":"Статус Водителей"}
+        {"data":"cancel_broadcast", "text":"Отмена"}
+      ]
+    },
+    "hide_message" : {
+      "type" : "inline",
+      "layout" : [1],
+      "buttons" : [
+        {"data":"hide_message", "text":"Скрыть сообщение"}
       ]
     }
   }

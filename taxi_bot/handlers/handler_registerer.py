@@ -7,7 +7,8 @@ from taxi_bot.handlers.client import (
     StartHandler, 
     HelpHandler,
     UpdateContact,
-    MemberStatus
+    MemberStatus,
+    HideMessage
 )
 
 from taxi_bot.handlers.driver_handler import (
@@ -42,8 +43,13 @@ from taxi_bot.handlers.order_handler import (
 )
 
 from taxi_bot.handlers.admin_menu import (
+    InputMessage,
     AdminMenu,
-    DriversStatus
+    DriversStatus,
+    InviteBroadcastMessage,
+    CheckBroadcastMessage,
+    BroadcastMessage,
+    CancelBroadcast
 )
 
 def register_handlers(
@@ -56,14 +62,10 @@ def register_handlers(
     ):
     INSTANCES = db, bot, config, kbs, logger
     ADMIN_COND = lambda c: c.from_user.id == config.ADMIN_ID
-    MODER_COND = lambda c: c.from_user.id in config.MODER_IDs
+    MODER_COND = lambda c: c.from_user.id in config.MODER_IDs + [config.ADMIN_ID]
     
     def L(startswith):
         return lambda c: c.data.startswith(startswith)
-    
-    # admin/moder menu
-    dp.register_message_handler(AdminMenu(*INSTANCES), ADMIN_COND, commands=['help'])
-    dp.register_callback_query_handler(DriversStatus(*INSTANCES), ADMIN_COND, L('drivers_status'))
 
     # main handlers
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['start'])
@@ -71,6 +73,7 @@ def register_handlers(
     dp.register_message_handler(UpdateContact(*INSTANCES), content_types=['contact'])
     dp.register_message_handler(HelpHandler(*INSTANCES), commands=['help'])
     dp.register_message_handler(JobHandler(*INSTANCES), commands=['job'])
+    dp.register_callback_query_handler(HideMessage(*INSTANCES), L('hide_message'))
     dp.register_my_chat_member_handler(MemberStatus(*INSTANCES))
 
     # driver handlers
@@ -98,6 +101,14 @@ def register_handlers(
     dp.register_callback_query_handler(DriverComplete(*INSTANCES), L('driver_complete'))
     dp.register_callback_query_handler(DriverCancel(*INSTANCES), L('driver_cancel'))
     dp.register_callback_query_handler(PassengerCancel(*INSTANCES), L('passenger_cancel'), state='*')
+    
+    # admin/moder menu
+    dp.register_message_handler(AdminMenu(*INSTANCES), MODER_COND, commands=['admin'])
+    dp.register_callback_query_handler(DriversStatus(*INSTANCES), MODER_COND, L('drivers_status'))
+    dp.register_callback_query_handler(InviteBroadcastMessage(*INSTANCES), ADMIN_COND, L('invite_broadcast'))
+    dp.register_message_handler(CheckBroadcastMessage(*INSTANCES), ADMIN_COND, state=InputMessage.invite_input)
+    dp.register_callback_query_handler(BroadcastMessage(*INSTANCES), ADMIN_COND, L('broadcast'), state=InputMessage.message)
+    dp.register_callback_query_handler(CancelBroadcast(*INSTANCES), ADMIN_COND, L('cancel_broadcast'), state='*')
 
     logger.info('Handlers are registered')
 
