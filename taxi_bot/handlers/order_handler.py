@@ -113,13 +113,13 @@ class DriverAccept(OrderBaseHandler):
         driver_car = driver.driver_car
         driver_phone_number = driver.phone_number
         order_id = int(callback_query.data.split('@')[-1])
-        await self.remove_reply_markup(callback_query, order_id)
+        await self.delete_old_messages(order_id=order_id)
+        # await self.remove_reply_markup(callback_query, order_id)
         order = self._db.get_order_by_id(order_id)
         passenger_id = order.passenger_id
         passenger_phone_number = self._db.get_user_by_id(passenger_id).phone_number
         self._db.update_driver_status(driver_id, 150)
         self._db.update_order_driver(order_id, driver_id)
-        await self.delete_old_messages(order_id=order_id)
         await self.show_order(order, passenger_id, keyboard=False)
         await self.show_order(order, driver_id, keyboard=False)
         text = f'Ваш заказ #{order_id}\nТелефон для связи с пассажиром {passenger_phone_number}'
