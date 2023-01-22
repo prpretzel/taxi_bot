@@ -154,7 +154,6 @@ class DriverAccepted(DriverBaseHandler):
         await self.send_message(self._config.ADMIN_ID, -1, text)
         await self.delete_old_messages(chat_id=driver_id)
         text = f"Вы стали водителем. Вы можете выйти на работу использую меню 'Работа в такси' либо через команду /job"
-        await self.remove_reply_markup(callback_query, -1)
         await self.send_message(driver_id, -1, text)
         await self._bot.answer_callback_query(callback_query.id)
 
@@ -172,8 +171,8 @@ class DriverCancelRegistration(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
         chat_id = callback_query.from_user.id
-        await self.send_message(callback_query.from_user.id, -1, 'Регистрация отменена')
         await self.delete_old_messages(chat_id=chat_id)
+        await self.send_message(chat_id, -1, 'Регистрация отменена')
         await self.send_message(chat_id, -1, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         await self._bot.answer_callback_query(callback_query.id)
         current_state = await state.get_state()
@@ -207,17 +206,20 @@ class DriverStopWork(DriverBaseHandler):
         status = driver.driver_status
         kb_name = None
         if status==150:
-            text = 'Завершите или отмените свой текущий заказ'
+            active_order = self._db.get_drivers_active_order(chat_id)
+            await self.delete_old_messages(chat_id=chat_id, order_id=active_order.order_id)
+            await self.send_message(chat_id, -1, 'Завершите или отмените свой текущий заказ')
+            order_status = active_order.order_status
+            kb_name = {200:'driver_cancel_wait', 250:'driver_cancel_pick', 300:'driver_complete'}[order_status]
+            await self.show_order(active_order, chat_id, kb_name=kb_name)
         elif status==100:
             shift = self._db.driver_end_shift(chat_id)
             report = self.create_shift_report(shift)
-            text = f"Вы закончили свой рабочий день.\n" + report
-            kb_name = 'driver_menu'
             self._db.update_driver_status(chat_id, 50)
             await self.delete_old_messages(chat_id=chat_id)
+            await self.send_message(chat_id, -1, f"Вы закончили свой рабочий день.\n" + report, 'driver_menu')
         elif status==50:
-            text='Вы сейчас не работаете'
-        await self.send_message(chat_id, -1, text, kb_name)
+            await self.send_message(chat_id, -1, 'Вы сейчас не работаете')
         await self._bot.answer_callback_query(callback_query.id)
 
 
