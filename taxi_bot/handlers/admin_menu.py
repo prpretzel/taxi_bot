@@ -32,7 +32,7 @@ class AdminMenu(AdminBaseHandler):
 
     async def __call__(self, message: types.Message) -> None: 
         chat_id = message.from_user.id
-        await self.log_message(_, message.message_id, -1, self, '/admin')
+        self.log_message(chat_id, message.message_id, -1, self, '/admin')
         text = 'Админское меню'
         await self.send_message(chat_id, -1, text, 'admin_menu')
 
@@ -77,7 +77,7 @@ class CheckBroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, message: types.Message, state:FSMContext) -> None:
         text = message.text
-        await self.log_message(message.from_user.id, message.message_id, -1, self, text)
+        self.log_message(message.from_user.id, message.message_id, -1, self, text)
         await self.set_state(state, 'message', text)
         await InputMessage.next()
         await self.send_message(message.from_user.id, -1, text, 'broadcast_message')
