@@ -8,6 +8,8 @@ from taxi_bot.load_config import Config
 from aiogram import types
 config = Config()
 
+from sqlalchemy import select
+
 
 class User(Base):
     __tablename__ = 'users'
@@ -110,63 +112,61 @@ class Log_Message(Base):
 class DataBase:
     
     def __init__(self):
-        import os
-        if config.GCLOUD_CREDS_PATH:
-            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = config.GCLOUD_CREDS_PATH
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.ext.asyncio import AsyncSession
+        user = config.DB_USER
+        password = config.DB_PASS
+        database = config.DB_NAME 
+        host = '34.29.38.218'
+        port = 5432
+        DATABASE_URL = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{database}"
 
-        def getconn():
-            from google.cloud.sql.connector import Connector
-            connector = Connector()
-            conn = connector.connect(
-            config.INSTANCE_CONNECTION_NAME,
-                "pg8000",
-                user= config.DB_USER,
-                password=config.DB_PASS,
-                db=config.DB_NAME,
-            )
-            return conn
-        
-        # from sqlalchemy.ext.asyncio import create_async_engine as create_engine
-        # from sqlalchemy.ext.asyncio import AsyncSession
+        self._engine = create_async_engine(DATABASE_URL)
 
-        if config.database_path:
-            engine = create_engine(f"sqlite:///{config.database_path}", echo=True)
-        else:
-            engine = create_engine(f"postgresql+pg8000://", creator=getconn, echo=True)
-        Base.metadata.create_all(bind=engine)
-        # Session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
-        Session = sessionmaker(bind=engine)
+        Session = sessionmaker(
+            self._engine, 
+            autocommit=False, 
+            autoflush=False, 
+            class_=AsyncSession, 
+            expire_on_commit=False
+        )
         self._session = Session()
 
-    def log_message(self, level, chat_id, message_id, order_id, _self, message, shown):
+# ------------------------------------------------------------------------------------------------------------------ 
+# ------------------------------------------------------------------------------------------------------------------
+
+    async def init_tables(self):
+        async with self._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)            
+
+    async def log_message(self, level, chat_id, message_id, order_id, _self, message, shown):
         source = _self.__class__.__name__
         log = Log_Message(level, chat_id, message_id, order_id, source, message, shown)
         self._session.add(log)
-        self._session.commit()
+        await self._session.commit()
 
-    def update_log_status(self, log_ids):
-        log_messages: List[Log_Message] = self._session.query(Log_Message).filter(Log_Message.log_id.in_(log_ids)).all()
+    async def update_log_status(self, log_ids):
+        log_messages: List[Log_Message] = await self._session.scalars(select(Log_Message).filter(Log_Message.log_id.in_(log_ids)))
         for log_message in log_messages:
             log_message.shown = 0
-        self._session.commit()
+        await self._session.commit()
 
     def get_group(self, group=None):
-        users = self._session.query(User).filter(User.active==1)
+        statement = select(User).filter(User.active==1)
         if group=='Passenger':
-            return users.filter(User.driver_status.is_(None))
+            statement = statement.filter(User.driver_status.is_(None))
         elif group=='Driver':
-            return users.filter(User.driver_status!=0)
-        else:
-            return users
+            statement = statement.filter(User.driver_status!=0)
+        return statement
 
-    def update_activity(self, user_id, activity_status):
-        user = self.get_user_by_id(user_id)
+    async def update_activity(self, user_id, activity_status):
+        user = await self.get_user_by_id(user_id)
         user.active = activity_status
-        self._session.commit()
+        await self._session.commit()
 
-    def create_user(self, message: types.Message):
+    async def create_user(self, message: types.Message):
         user_id = message.from_user.id
-        user = self.get_user_by_id(user_id)
+        user = await self.get_user_by_id(user_id)
         if not user:
             username = message.from_user.username
             first_name = message.from_user.first_name
@@ -175,167 +175,168 @@ class DataBase:
             self._session.add(new_passenger)
         else:
             user.active = 1
-        self._session.commit()
-        return self.check_user_phone_number(user_id)
+        await self._session.commit()
+        return await self.check_user_phone_number(user_id)
 
-    def check_user_phone_number(self, user_id):
-        return bool(self.get_user_by_id(user_id).phone_number)
+    async def check_user_phone_number(self, user_id):
+        user = await self.get_user_by_id(user_id)
+        phone_number = bool(user.phone_number)
+        return phone_number
 
-    def update_phone_number(self, user_id, phone_number):
-        user = self.get_user_by_id(user_id)
+    async def update_phone_number(self, user_id, phone_number):
+        user = await self.get_user_by_id(user_id)
         user.phone_number = phone_number
-        self._session.commit()
+        await self._session.commit()
 
-    def create_driver(self, user_id, first_name, driver_car):
-        driver = self.get_user_by_id(user_id)
+    async def create_driver(self, user_id, first_name, driver_car):
+        driver = await self.get_user_by_id(user_id)
         driver.driver_registration_date = datetime.now()
         driver.first_name = first_name
         driver.driver_status = 50
         driver.driver_car = driver_car
         driver.driver_balance = 0
         driver.driver_shift_id = 0
-        self._session.commit()
+        await self._session.commit()
 
-    def create_order(self, passenger_id, location_from) -> int:
+    async def create_order(self, passenger_id, location_from) -> int:
         new_order = Order(passenger_id, location_from)
         self._session.add(new_order)
-        self._session.commit()
+        await self._session.commit()
         return new_order.order_id
 
-    def update_order_location_to(self, order_id, location_to) -> Order:
-        order = self.get_order_by_id(order_id)
+    async def update_order_location_to(self, order_id, location_to) -> Order:
+        order = await self.get_order_by_id(order_id)
         order.order_status = 90
         order.location_to = location_to
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def update_order_price(self, order_id, price) -> Order:
-        order = self.get_order_by_id(order_id)
+    async def update_order_price(self, order_id, price) -> Order:
+        order = await self.get_order_by_id(order_id)
         order.order_status = 100
         order.price = price
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def update_order_driver(self, order_id, driver_id) -> Order:
-        print(driver_id, '-'*60)
-        order = self.get_order_by_id(order_id)
-        print(driver_id, '-'*60)
+    async def update_order_driver(self, order_id, driver_id) -> Order:
+        order = await self.get_order_by_id(order_id)
         driver_id = order.driver_id
-        print(driver_id, '-'*60)
         if driver_id:
             return
-        print(driver_id, '-'*60)
         order.order_status = 200
         order.driver_id = driver_id
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def update_wait_dt(self, order_id) -> Order:
-        order = self.get_order_by_id(order_id)
+    async def update_wait_dt(self, order_id) -> Order:
+        order = await self.get_order_by_id(order_id)
         order.order_status = 250
         order.wait_dt = datetime.now()
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def update_pick_dt(self, order_id) -> Order:
-        order = self.get_order_by_id(order_id)
+    async def update_pick_dt(self, order_id) -> Order:
+        order = await self.get_order_by_id(order_id)
         order.order_status = 300
         order.pick_dt = datetime.now()
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def update_end_dt(self, order_id) -> Order:
-        order = self.get_order_by_id(order_id)
+    async def update_end_dt(self, order_id) -> Order:
+        order = await self.get_order_by_id(order_id)
         order.order_status = 400
         order.end_dt = datetime.now()
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def update_cancel_dt(self, order_id) -> Order:
-        order = self.get_order_by_id(order_id)
+    async def update_cancel_dt(self, order_id) -> Order:
+        order = await self.get_order_by_id(order_id)
         order.cancel_dt = datetime.now()
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def update_order(self, order_id, new_status) -> Order:
-        order = self.get_order_by_id(order_id)
+    async def update_order(self, order_id, new_status) -> Order:
+        order = await self.get_order_by_id(order_id)
         order.order_status = new_status
-        self._session.commit()
+        await self._session.commit()
         return order
 
-    def get_order_by_id(self, order_id) -> Order:
-        order = self._session.query(Order).filter(Order.order_id==order_id).first()
+    async def get_order_by_id(self, order_id) -> Order:
+        order = await self._session.scalar(select(Order).filter(Order.order_id==order_id))
         return order
 
-    def get_orders(self, status) -> List[Order]:
-        order = self._session.query(Order).filter(Order.order_status==status).all()
-        return order
+    async def get_orders(self, status) -> List[Order]:
+        orders = await self._session.scalars(select(Order).filter(Order.order_status==status))
+        return orders
 
-    def get_user_active_order(self, user_id) -> Order:
+    async def get_user_active_order(self, user_id) -> Order:
         statuses = [100,200,250,300]
-        return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status.in_(statuses)).first()
+        orders = await self._session.scalar(select(Order).filter(Order.passenger_id==user_id).filter(Order.order_status.in_(statuses)))
+        return orders
 
-    def get_order_messages(self, order_id, chat_id, message_id) -> List[Log_Message]:
-        messages = self._session.query(Log_Message).filter(Log_Message.shown==1)
+    async def get_order_messages(self, order_id, chat_id, message_id) -> List[Log_Message]:
+        statement = select(Log_Message).filter(Log_Message.shown==1)
         if order_id:
-            messages = messages.filter(Log_Message.order_id==order_id)
+            statement = statement.filter(Log_Message.order_id==order_id)
         if chat_id:
-            messages = messages.filter(Log_Message.chat_id==chat_id)
+            statement = statement.filter(Log_Message.chat_id==chat_id)
         if message_id:
-            messages = messages.filter(Log_Message.message_id==message_id)
-        return messages.all()
+            statement = statement.filter(Log_Message.message_id==message_id)
+        return await self._session.scalars(statement)
 
-    def get_user_by_id(self, user_id) -> User:
-        return self.get_group().filter(User.user_id==user_id).first()
+    async def get_user_by_id(self, user_id) -> User:
+        user = await self._session.scalar(select(User).filter(User.user_id==user_id))
+        return user
 
-    def update_driver_status(self, driver_id, new_status):
-        driver = self.get_user_by_id(driver_id)
+    async def update_driver_status(self, driver_id, new_status):
+        driver = await self.get_user_by_id(driver_id)
         driver.driver_status = new_status
-        self._session.commit()
+        await self._session.commit()
 
-    def get_drivers(self, status=None) -> List[User]:
-        drivers = self.get_group('Driver').filter(User.active==1)
+    async def get_drivers(self, status=None) -> List[User]:
+        statement = self.get_group('Driver')
         if status:
-            drivers = drivers.filter(User.driver_status==status)
-        return drivers.all()
+            statement = statement.filter(User.driver_status==status)
+        return await self._session.scalars(statement)
 
-    def get_drivers_id(self, status=None) -> List[int]:
-        drivers = self.get_drivers(status)
+    async def get_drivers_id(self, status=None) -> List[int]:
+        drivers = await self.get_drivers(status)
         drivers_id = [dr.user_id for dr in drivers]
         return drivers_id
 
-    def get_drivers_active_order(self, driver_id) -> Order:
-        order = self._session.query(Order).filter(Order.driver_id==driver_id).filter(Order.order_status.in_([200,250,300])).first()
+    async def get_drivers_active_order(self, driver_id) -> Order:
+        order = await self._session.scalar(select(Order).filter(Order.driver_id==driver_id).filter(Order.order_status.in_([200,250,300])))
         return order
 
-    def get_available_drivers_count(self) -> int:
-        drivers = self.get_group('Driver').filter(User.active==1).filter(User.driver_status.in_([100,150])).all()
-        return len(drivers) + 3
+    async def get_available_drivers_count(self) -> int:
+        drivers_count = await self._session.execute('COUNT * FROM drivers WHERE active=1 AND driver_status IN (100, 150)')
+        print(drivers_count)
+        return drivers_count + 3
 
-    def get_active_shift_by_driver_id(self, driver_id) -> Shift:
-        driver = self.get_user_by_id(driver_id)
+    async def get_active_shift_by_driver_id(self, driver_id) -> Shift:
+        driver = await self.get_user_by_id(driver_id)
         shift_id = driver.driver_shift_id
-        shift = self._session.query(Shift).filter(Shift.shift_id==shift_id).first()
+        shift = await self._session.scalar(select(Shift).filter(Shift.shift_id==shift_id))
         return shift
 
-    def driver_start_shift(self, driver_id) -> None:
+    async def driver_start_shift(self, driver_id) -> None:
         new_shift = Shift(driver_id)
-        driver = self.get_user_by_id(driver_id)
+        driver = await self.get_user_by_id(driver_id)
         self._session.add(new_shift)
-        self._session.commit()
+        await self._session.commit()
         driver.driver_shift_id = new_shift.shift_id
-        self._session.commit()
+        await self._session.commit()
 
-    def driver_complete_trip(self, driver_id, income) -> None:
-        shift = self.get_active_shift_by_driver_id(driver_id)
-        driver = self.get_user_by_id(driver_id)
+    async def driver_complete_trip(self, driver_id, income) -> None:
+        shift = await self.get_active_shift_by_driver_id(driver_id)
+        driver = await self.get_user_by_id(driver_id)
         driver.driver_status = 100
         shift.total_income += income
         shift.total_trips += 1
-        self._session.commit()
+        await self._session.commit()
 
-    def driver_end_shift(self, driver_id) -> Shift:
-        shift = self.get_active_shift_by_driver_id(driver_id)
+    async def driver_end_shift(self, driver_id) -> Shift:
+        shift = await self.get_active_shift_by_driver_id(driver_id)
         shift.shift_end = datetime.now()
-        self._session.commit()
+        await self._session.commit()
         return shift

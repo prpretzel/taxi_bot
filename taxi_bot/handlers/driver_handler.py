@@ -57,15 +57,15 @@ class JobHandler(DriverBaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
         chat_id = message.from_user.id
-        self.log_message(chat_id, message.message_id, -1, self, 'job_command')
+        await self.log_message(chat_id, message.message_id, -1, self, 'job_command')
         if not await self.create_user(message):
             return
-        if chat_id in self._db.get_drivers_id():
-            driver = self._db.get_user_by_id(chat_id)
+        if chat_id in await self._db.get_drivers_id():
+            driver = await self._db.get_user_by_id(chat_id)
             status = driver.driver_status
             kb_name = 'driver_menu'
             if status in [100,150]:
-                active_shift = self._db.get_active_shift_by_driver_id(chat_id)
+                active_shift = await self._db.get_active_shift_by_driver_id(chat_id)
                 report = self.create_shift_report(active_shift)
                 text = 'Вы сейчас на смене.\n' + report
             elif status==50:
@@ -102,7 +102,7 @@ class DriverName(DriverBaseHandler):
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
         chat_id = message.from_user.id
         await self.set_state(state, 'name', message.text)
-        self.log_message(chat_id, message.message_id, -1, self, f'name: {message.text}')
+        await self.log_message(chat_id, message.message_id, -1, self, f'name: {message.text}')
         await DriverJobApplience.next()
         text = 'Введите цвет, марку и регистрационный номер автомобиля (пример: Зеленый Фольксваген А114КВ):'
         await self.send_message(chat_id, -1, text, 'driver_cancel_registration')
@@ -113,7 +113,7 @@ class DriverCar(DriverBaseHandler):
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
         chat_id = message.from_user.id
         await self.set_state(state, 'car', message.text)
-        self.log_message(chat_id, message.message_id, -1, self, f'car: {message.text}')
+        await self.log_message(chat_id, message.message_id, -1, self, f'car: {message.text}')
         await DriverJobApplience.next()
         name = await self.get_state(state, 'name')
         car = await self.get_state(state, 'car')
@@ -149,7 +149,7 @@ class DriverAccepted(DriverBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, first_name, car = callback_query.message.text.split('\n')[-1].split('@')
         driver_id = int(driver_id)
-        self._db.create_driver(driver_id, first_name, car)
+        await self._db.create_driver(driver_id, first_name, car)
         text = f'Водитель принят'
         await self.send_message(self._config.ADMIN_ID, -1, text)
         await self.delete_old_messages(chat_id=driver_id)
@@ -185,14 +185,14 @@ class DriverStartWork(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         chat_id = callback_query.from_user.id
-        driver = self._db.get_user_by_id(chat_id)
+        driver = await self._db.get_user_by_id(chat_id)
         status = driver.driver_status
         if status in [100,150]:
             text = 'Вы уже на смене'
         elif status==50:
             text = 'Вы начали свой рабочий день'
-            self._db.update_driver_status(chat_id, 100)
-            self._db.driver_start_shift(chat_id)
+            await self._db.update_driver_status(chat_id, 100)
+            await self._db.driver_start_shift(chat_id)
         await self.send_message(chat_id, -1, text)
         await self.show_active_orders(chat_id)
         await self._bot.answer_callback_query(callback_query.id)
@@ -202,20 +202,20 @@ class DriverStopWork(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         chat_id = callback_query.from_user.id
-        driver = self._db.get_user_by_id(chat_id)
+        driver = await self._db.get_user_by_id(chat_id)
         status = driver.driver_status
         kb_name = None
         if status==150:
-            active_order = self._db.get_drivers_active_order(chat_id)
+            active_order = await self._db.get_drivers_active_order(chat_id)
             await self.delete_old_messages(chat_id=chat_id, order_id=active_order.order_id)
             await self.send_message(chat_id, -1, 'Завершите или отмените свой текущий заказ')
             order_status = active_order.order_status
             kb_name = {200:'driver_cancel_wait', 250:'driver_cancel_pick', 300:'driver_complete'}[order_status]
             await self.show_order(active_order, chat_id, kb_name=kb_name)
         elif status==100:
-            shift = self._db.driver_end_shift(chat_id)
+            shift = await self._db.driver_end_shift(chat_id)
             report = self.create_shift_report(shift)
-            self._db.update_driver_status(chat_id, 50)
+            await self._db.update_driver_status(chat_id, 50)
             await self.delete_old_messages(chat_id=chat_id)
             await self.send_message(chat_id, -1, f"Вы закончили свой рабочий день.\n" + report, 'driver_menu')
         elif status==50:

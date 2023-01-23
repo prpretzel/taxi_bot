@@ -1,11 +1,11 @@
 from aiogram import executor
 from taxi_bot.create_bot import CreateBot
-from taxi_bot.database_handler import DataBase
+# from taxi_bot.database_handler import DataBase
 
 if __name__ == '__main__': 
-    db = DataBase()
+    # db = DataBase()
     bot = CreateBot()
-    bot.register_handlers()
+    # bot.register_handlers()
     executor.start_polling(
         bot.dp, 
         skip_updates=True, 

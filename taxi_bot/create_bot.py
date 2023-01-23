@@ -20,6 +20,9 @@ class CreateBot:
         self.db = DataBase()
         self.logger = Logger()
         self.logger.info(self, '', 'Bot and Dispatcher are initiated <-------')
+        self.register_handlers()
+
+    
 
     def register_handlers(self):
         RH(self.db, self.bot, self.config, self.kbs, self.dp, self.logger)
@@ -32,6 +35,8 @@ class CreateBot:
             types.BotCommand(command='/job', description='Работа в такси')
         ]
         await self.bot.set_my_commands(bot_commands)
+
+        await self.db.init_tables()
 
     async def shutdown(self, _):
         await self.dp.storage.close()

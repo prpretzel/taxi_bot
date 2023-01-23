@@ -44,7 +44,7 @@ class DriversStatus(AdminBaseHandler):
         text = list()
         statuses = {50:0, 100:0, 150:0}
         status_mapper = {50:'🔴', 100:'🟢', 150:'🟡'}
-        drivers = self._db.get_drivers()
+        drivers = await self._db.get_drivers()
         drivers.sort(key=lambda v: v.driver_status, reverse=True)
         for driver in drivers:
             driver_status = driver.driver_status
