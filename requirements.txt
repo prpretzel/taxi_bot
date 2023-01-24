@@ -1,9 +1,4 @@
 aiogram==2.23.1
 SQLAlchemy==1.4.44
 pg8000==1.29.4
-google==3.0.0
-google-api-core==2.11.0
-google-auth==2.15.0
-google-cloud-core==2.3.2
-google-cloud-spanner==3.26.0
-googleapis-common-protos==1.57.0
+cloud-sql-python-connector==1.1.0
