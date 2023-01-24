@@ -125,16 +125,9 @@ class DataBase:
                 db=config.DB_NAME,
             )
             return conn
-        
-        # from sqlalchemy.ext.asyncio import create_async_engine as create_engine
-        # from sqlalchemy.ext.asyncio import AsyncSession
 
-        if config.database_path:
-            engine = create_engine(f"sqlite:///{config.database_path}", echo=True)
-        else:
-            engine = create_engine(f"postgresql+pg8000://", creator=getconn, echo=True)
+        engine = create_engine(f"postgresql+pg8000://", creator=getconn)
         Base.metadata.create_all(bind=engine)
-        # Session = sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
         Session = sessionmaker(bind=engine)
         self._session = Session()
 
