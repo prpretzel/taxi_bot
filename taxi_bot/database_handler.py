@@ -110,29 +110,32 @@ class Log_Message(Base):
 class DataBase:
     
     def __init__(self):
-        # import os
-        # if config.GCLOUD_CREDS_PATH:
-        #     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = config.GCLOUD_CREDS_PATH
+        import os
+        if config.GCLOUD_CREDS_PATH:
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = config.GCLOUD_CREDS_PATH
 
-        # def getconn():
-        #     from google.cloud.sql.connector import Connector
-        #     connector = Connector()
-        #     conn = connector.connect(
-        #     config.INSTANCE_CONNECTION_NAME,
-        #         "pg8000",
-        #         user= config.DB_USER,
-        #         password=config.DB_PASS,
-        #         db=config.DB_NAME,
-        #     )
-        #     return conn
-        user = config.DB_USER
-        password = config.DB_PASS
-        db_name = config.DB_NAME
-        host = config.DB_HOST
-        port = config.DB_PORT
-        DATABASE_URL = f"postgresql+pg8000://{user}:{password}@{host}:{port}/{db_name}"
-        engine = create_engine(DATABASE_URL)
-        # engine = create_engine(f"postgresql+pg8000://", creator=getconn)
+        def getconn():
+            from google.cloud.sql.connector import Connector
+            connector = Connector()
+            conn = connector.connect(
+                config.INSTANCE_CONNECTION_NAME,
+                "pg8000",
+                user=config.DB_USER,
+                password=config.DB_PASS,
+                db=config.DB_NAME,
+            )
+            return conn
+        
+        engine = create_engine(f"postgresql+pg8000://", creator=getconn)
+# -------------------------------------------------------------------------------------
+        # user = config.DB_USER
+        # password = config.DB_PASS
+        # db_name = config.DB_NAME
+        # host = config.DB_HOST
+        # port = config.DB_PORT
+        # DATABASE_URL = f"postgresql+pg8000://{user}:{password}@{host}:{port}/{db_name}"
+        # engine = create_engine(DATABASE_URL)
+# -------------------------------------------------------------------------------------
         Base.metadata.create_all(bind=engine)
         Session = sessionmaker(bind=engine)
         self._session = Session()
