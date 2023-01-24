@@ -219,12 +219,8 @@ class DataBase:
         return order
 
     def update_order_driver(self, order_id, driver_id) -> Order:
-        print(driver_id, '-'*60)
         order = self.get_order_by_id(order_id)
-        print(driver_id, '-'*60)
-        driver_id = order.driver_id
-        print(driver_id, '-'*60)
-        if driver_id:
+        if order.driver_id:
             return
         print(driver_id, '-'*60)
         order.order_status = 200
