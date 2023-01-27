@@ -18,8 +18,8 @@ class User(Base):
     last_name = Column('last_name', String)
     phone_number = Column('phone_number', String)
     user_registration_date = Column('user_registration_date', DateTime)
-    driver_registration_date = Column('driver_registration_date', DateTime)
     active = Column('active', Integer)
+    driver_registration_date = Column('driver_registration_date', DateTime)
     driver_status = Column('driver_status', Integer)
     driver_car = Column('driver_car', String)
     driver_balance = Column('driver_balance', Integer)
@@ -37,8 +37,8 @@ class User(Base):
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
-        self.active = 1
         self.user_registration_date = datetime.now()
+        self.active = 1
 
     
 class Order(Base):
@@ -46,10 +46,10 @@ class Order(Base):
 
     order_id = Column('order_id', Integer, Identity(), primary_key=True)
     order_dt = Column('order_dt', DateTime)
+    accept_dt = Column('accept_dt', DateTime)
     wait_dt = Column('wait_dt', DateTime)
     pick_dt = Column('pick_dt', DateTime)
     end_dt = Column('end_dt', DateTime)
-    cancel_dt = Column('cancel_dt', DateTime)
     passenger_id = Column('passenger_id', BigInteger)
     driver_id = Column('driver_id', BigInteger)
     location_from = Column('location_from', String)
@@ -58,11 +58,10 @@ class Order(Base):
     order_status = Column('order_status', Integer)
 
 
-    def __init__(self, passenger_id, location_from):
+    def __init__(self, passenger_id):
         self.order_dt = datetime.now()
         self.passenger_id = passenger_id
-        self.location_from = location_from
-        self.order_status = 80
+        self.order_status = 70
 
 
 class Shift(Base):
@@ -127,15 +126,6 @@ class DataBase:
             return conn
         
         engine = create_engine(f"postgresql+pg8000://", creator=getconn)
-# -------------------------------------------------------------------------------------
-        # user = config.DB_USER
-        # password = config.DB_PASS
-        # db_name = config.DB_NAME
-        # host = config.DB_HOST
-        # port = config.DB_PORT
-        # DATABASE_URL = f"postgresql+pg8000://{user}:{password}@{host}:{port}/{db_name}"
-        # engine = create_engine(DATABASE_URL)
-# -------------------------------------------------------------------------------------
         Base.metadata.create_all(bind=engine)
         Session = sessionmaker(bind=engine)
         self._session = Session()
@@ -151,6 +141,18 @@ class DataBase:
         for log_message in log_messages:
             log_message.shown = 0
         self._session.commit()
+
+    def delete_old_logs(self, expire_hours=24):
+        pass
+        # from datetime import timedelta
+        # expire_time = datetime.now() - timedelta(hours=expire_hours)
+        # logs = (
+        #     self._session.query(Log_Message)
+        #     .filter(Log_Message.shown==0)
+        #     .filter(Log_Message.date_time < expire_time)
+        # )
+        # logs.delete()
+        # self._session.commit()
 
     def get_group(self, group=None):
         users = self._session.query(User).filter(User.active==1)
@@ -198,11 +200,18 @@ class DataBase:
         driver.driver_shift_id = 0
         self._session.commit()
 
-    def create_order(self, passenger_id, location_from) -> int:
-        new_order = Order(passenger_id, location_from)
+    def create_order(self, passenger_id) -> int:
+        new_order = Order(passenger_id)
         self._session.add(new_order)
         self._session.commit()
         return new_order.order_id
+
+    def update_order_location_from(self, order_id, location_from) -> Order:
+        order = self.get_order_by_id(order_id)
+        order.order_status = 80
+        order.location_from = location_from
+        self._session.commit()
+        return order
 
     def update_order_location_to(self, order_id, location_to) -> Order:
         order = self.get_order_by_id(order_id)
@@ -222,11 +231,19 @@ class DataBase:
         order = self.get_order_by_id(order_id)
         if order.driver_id:
             return
-        print(driver_id, '-'*60)
         order.order_status = 200
         order.driver_id = driver_id
+        order.accept_dt = datetime.now()
         self._session.commit()
         return order
+
+    def update_order_driver_none(self, order_id, driver_id) -> Order:
+        order = self.get_order_by_id(order_id)
+        if order.driver_id == driver_id:
+            order.order_status = 100
+            order.driver_id = None
+            self._session.commit()
+            return order
 
     def update_wait_dt(self, order_id) -> Order:
         order = self.get_order_by_id(order_id)
@@ -251,7 +268,7 @@ class DataBase:
 
     def update_cancel_dt(self, order_id) -> Order:
         order = self.get_order_by_id(order_id)
-        order.cancel_dt = datetime.now()
+        order.end_dt = datetime.now()
         self._session.commit()
         return order
 
@@ -308,7 +325,7 @@ class DataBase:
 
     def get_available_drivers_count(self) -> int:
         drivers = self.get_group('Driver').filter(User.active==1).filter(User.driver_status.in_([100,150])).all()
-        return len(drivers) + 3
+        return len(drivers)
 
     def get_active_shift_by_driver_id(self, driver_id) -> Shift:
         driver = self.get_user_by_id(driver_id)
@@ -337,3 +354,27 @@ class DataBase:
         shift.shift_end = datetime.now()
         self._session.commit()
         return shift
+
+    def get_shifts(self):
+        query_shifts = self._session.query(
+                User.user_id, 
+                User.first_name,
+                User.driver_registration_date,
+                User.driver_car,
+                Shift.shift_id,
+                Shift.shift_start,
+                Shift.shift_end,
+                Shift.total_trips,
+                Shift.total_income,
+            ).join(Shift, User.user_id == Shift.driver_id)
+
+        query_orders = self._session.query(
+                Order.driver_id, 
+                User.first_name,
+                User.driver_car,
+                Order.order_dt,
+                Order.accept_dt,
+                Order.end_dt,
+            ).outerjoin(Order, User.user_id == Order.driver_id)
+        
+        return query_shifts, query_orders
