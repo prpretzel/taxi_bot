@@ -128,10 +128,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 credentials.json
+credentials_US.json
 database.sqlite
 database
 log.log
 connect_gcp.sh
-test.ipynb
 test.py
 taxi_bot_gcloud_creds.json
+*.ipynb

@@ -5,6 +5,7 @@ from taxi_bot.database_handler import DataBase
 from taxi_bot.load_config import Config
 from taxi_bot.logger import Logger
 from taxi_bot.buttons import keyboard_generator
+from aiogram.types import ReplyKeyboardRemove
 
 
 class BaseHandler:
@@ -50,29 +51,40 @@ class BaseHandler:
         phone_number = self._db.create_user(message)
         chat_id = message.from_user.id
         if not phone_number:
-            text = "Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку 'Оставить свой контакт', чтобы водители могли позвонить Вам для уточнения информации по вашему заказу."
-            await self.send_message(chat_id, -1, text, 'request_contact')
+            text = "Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку '📞Оставить свой контакт', чтобы водители могли позвонить Вам для уточнения информации по вашему заказу."
+            await self.send_message(chat_id, None, text, 'request_contact')
         return phone_number
 
     async def show_order(self, order, chat_id, kb_name=None):
-        lat, lon = order.location_from.split('|')
+        import re
         order_id = order.order_id
         title = order.location_to
         address = f"{order.price} рублей"
-        await self.send_venue(
-            chat_id=chat_id,
-            lat=lat, 
-            lon=lon, 
-            destination=title,
-            price=address,
-            order_id=order_id,
-            kb_name=kb_name
-        )
+        geo = re.match(r'\d{1,3}\.\d+|\d{1,3}\.\d+', order.location_from)
+        if geo:
+            lat, lon = order.location_from.split('|') 
+            await self.send_venue(
+                chat_id=chat_id,
+                lat=lat, 
+                lon=lon, 
+                destination=title,
+                price=address,
+                order_id=order_id,
+                kb_name=kb_name
+            )
+        else:
+            text = [
+                f"Откуда: {order.location_from}",
+                f"Куда: {title}",
+                f"Стоимость: {address}",
+            ]
+            text = '\n'.join(text)
+            await self.send_message(chat_id, order_id, text, kb_name)
 
     async def show_active_orders(self, driver_id):
         active_orders = self._db.get_orders(100)
-        text = 'Новые заказы:' if active_orders else 'Новых заказов нет'
-        await self.send_message(driver_id, -1, text)
+        # text = 'Новые заказы:' if active_orders else 'Новых заказов нет'
+        # await self.send_message(driver_id, None, text)
         for order in active_orders:
             await self.show_order(order, driver_id, 'driver_accept_refuse')
 
@@ -103,7 +115,7 @@ class BaseHandler:
             reply_markup=kb,
             parse_mode='html'
         )
-        self.log_message(chat_id, message.message_id, order_id, self, f'text: {text}')
+        self.log_message(chat_id, message.message_id, order_id, self, text)
         return message
 
     async def edit_reply_markup(self, callback_query: types.CallbackQuery, kb_name, order_id):
@@ -118,6 +130,40 @@ class BaseHandler:
         elif isinstance(query, types.CallbackQuery):
             message = await query.message.delete_reply_markup()
         self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
+    
+    async def discard_reply_markup(self, passenger_id):
+        message = await self._bot.send_message(passenger_id, "msg_text", reply_markup=ReplyKeyboardRemove())
+        await message.delete()
+
+    def message_data(self, input_, order_id=None):
+        chat_id = input_.from_user.id
+        optionals = dict()
+        if isinstance(input_, types.CallbackQuery):
+            message_id = input_.message.message_id
+            try:
+                order_id = int(input_.data.split('@')[-1])
+            except:
+                pass
+            optionals['data'] = input_.data
+            optionals['text'] = input_.message.text
+            self.log_info(chat_id, message_id, order_id, self, optionals['data'])
+        elif isinstance(input_, types.Message):
+            message_id = input_.message_id
+            if 'text' in input_:
+                optionals['text'] = input_.text
+                self.log_message(chat_id, message_id, order_id, self, optionals['text'])
+            elif 'location' in input_:
+                optionals['location'] = f"{input_.location.latitude}|{input_.location.longitude}"
+                self.log_message(chat_id, message_id, order_id, self, optionals['location'])
+            elif 'contact' in input_:
+                optionals['phone_number'] = f'+{input_.contact.phone_number}'
+                self.log_message(chat_id, message_id, order_id, self, optionals['phone_number'])
+            else:
+                self.log_message(chat_id, message_id, order_id, self, input_.content_type)
+        else:
+            self.log_message(chat_id, message_id, order_id, self, input_.content_type)
+
+        return chat_id, message_id, order_id, optionals
 
     async def send_venue(self, chat_id, lat, lon, destination, price, order_id, kb_name=None):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
