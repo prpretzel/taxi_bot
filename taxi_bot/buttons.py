@@ -2,19 +2,31 @@
 from typing import Dict
 
 
-def keyboard_generator(kb_config, suffix=''):
+def keyboard_generator(kb_config: dict, suffix: str=''):
     from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
     suffix = '@' + str(suffix) if suffix else ''
-    kb_type, kb_layout, buttons = kb_config.values()
-    keyboard = InlineKeyboardMarkup() if kb_type == 'inline' else ReplyKeyboardMarkup(resize_keyboard=True)
-    button_type = InlineKeyboardButton if kb_type == 'inline' else KeyboardButton
+    kb_type = kb_config.get('type')
+    kb_layout = kb_config.get('layout')
+    buttons = kb_config.get('buttons')
+    placeholder = kb_config.get('placeholder')
+    if kb_type=='inline':
+        keyboard = InlineKeyboardMarkup()
+        button_type = InlineKeyboardButton
+    elif kb_type=='reply':
+        keyboard = ReplyKeyboardMarkup(
+            resize_keyboard=True, 
+            input_field_placeholder=placeholder
+        )
+        button_type = KeyboardButton
+    else:
+        print('Keyboard error')
     buttons_list = list()
     for button in buttons:
         options = button.get('options')
         options = options if options else list()
-        request_contact=True if 'request_contact' in options else False
-        request_location=True if 'request_location' in options else False
+        request_contact = True if 'request_contact' in options else False
+        request_location = True if 'request_location' in options else False
         buttons_list.append(button_type(
             button.get('text'), 
             callback_data=button.get('data')+suffix,
