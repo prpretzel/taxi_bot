@@ -34,7 +34,7 @@ class AdminMenu(AdminBaseHandler):
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
         kb_name = 'admin_menu' if chat_id==self._config.ADMIN_ID else 'moder_menu'
         await self.send_message(chat_id, order_id, 'Админское меню', kb_name)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriversStatus(AdminBaseHandler):
@@ -63,7 +63,7 @@ class DriversStatus(AdminBaseHandler):
         ] + text
         text = '\n'.join(text)
         await self.send_message(chat_id, order_id, text, 'hide_message')
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class InviteBroadcastMessage(AdminBaseHandler):
@@ -73,7 +73,7 @@ class InviteBroadcastMessage(AdminBaseHandler):
         await self.delete_old_messages(chat_id=chat_id)
         await self.send_message(callback_query.from_user.id, order_id, 'Введите текст сообщения:', 'broadcast_cancel')
         await InputMessage.invite_input.set()
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class CheckBroadcastMessage(AdminBaseHandler):
@@ -98,7 +98,7 @@ class BroadcastMessage(AdminBaseHandler):
         for user_id in users_id:
             await self.send_message(user_id, order_id, text, 'hide_message')
         await state.finish()
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class CancelBroadcast(AdminBaseHandler):
@@ -108,7 +108,7 @@ class CancelBroadcast(AdminBaseHandler):
         await self.delete_old_messages(chat_id=chat_id)
         kb_name = 'admin_menu' if chat_id==self._config.ADMIN_ID else 'moder_menu'
         await self.send_message(chat_id, order_id, 'Админское меню', kb_name)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
         if await state.get_state():
             await state.finish()
 

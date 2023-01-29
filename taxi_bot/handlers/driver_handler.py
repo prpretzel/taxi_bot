@@ -88,7 +88,7 @@ class DriverJob(DriverBaseHandler):
         await self.remove_reply_markup(callback_query, order_id)
         text = f'Для регистрации в качестве водителя Вам необходимо указать своё имя, а также цвет, марку и регистрационный номер автомобиля'
         await self.send_message(chat_id, order_id, text, 'driver_continue_registration')
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverContinueRegistration(DriverBaseHandler):
@@ -100,7 +100,7 @@ class DriverContinueRegistration(DriverBaseHandler):
         text = 'Введите Ваше имя:'
         message = await self.send_message(chat_id, order_id, text, 'driver_cancel_registration')
         await self.set_state(state, 'previous_message', message)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverName(DriverBaseHandler):
@@ -174,7 +174,7 @@ class DriverAccepted(DriverBaseHandler):
         await self.delete_old_messages(chat_id=driver_id)
         text = f"Вы стали водителем. Вы можете выйти на работу использую меню 'Работа в такси' либо через команду /job"
         await self.send_message(driver_id, order_id, text)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverRefused(DriverBaseHandler):
@@ -184,7 +184,7 @@ class DriverRefused(DriverBaseHandler):
         driver_id, _, _ = callback_query.message.text.split('\n')[-1].split('@')
         await self.send_message(chat_id, order_id, 'Водитель отклонен')
         await self.send_message(driver_id, order_id, 'Ваша заявка отклонена')
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverCancelRegistration(DriverBaseHandler):
@@ -196,7 +196,7 @@ class DriverCancelRegistration(DriverBaseHandler):
         await self.send_message(chat_id, order_id, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         if await state.get_state():
             await state.finish()
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverStartWork(DriverBaseHandler):
@@ -216,7 +216,7 @@ class DriverStartWork(DriverBaseHandler):
             text = status
         await self.send_message(chat_id, order_id, text)
         await self.show_active_orders(chat_id)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverStopWork(DriverBaseHandler):
@@ -243,7 +243,7 @@ class DriverStopWork(DriverBaseHandler):
             await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report, 'driver_menu')
         elif status==50:
             await self.send_message(chat_id, None, 'Вы сейчас не работаете')
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverTopUpMenu(DriverBaseHandler):

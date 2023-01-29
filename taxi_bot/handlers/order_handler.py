@@ -34,9 +34,9 @@ class OrderBaseHandler(BaseHandler):
 class NewOrder(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
-        await OrderForm.order_id.set()
         if not await self.create_user(callback_query):
             return
+        await OrderForm.order_id.set()
         passenger_id, message_id, order_id, optionals = self.message_data(callback_query)
         await self.delete_old_messages(chat_id=passenger_id)
         active_order = self._db.get_user_active_order(passenger_id)
@@ -45,12 +45,13 @@ class NewOrder(OrderBaseHandler):
             await self.show_order(active_order, passenger_id)
             text = f"Мы все еще ищем Вам машину...\nВодителей на линии: {self._db.get_available_drivers_count()}"
             await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
-            return
-        order_id = self._db.create_order(passenger_id)
-        await self.send_message(passenger_id, order_id, "Отправьте сообщение с местом, откуда Вас нужно забрать", 'passenger_send_location')
-        message = await self.send_message(passenger_id, order_id, "Или нажмите кнопку '🧭Отправить геопозицию'", 'passenger_cancel')
-        await self.set_state(state, 'order_id', order_id)
-        await self.set_state(state, 'previous_message', message)
+        else:
+            order_id = self._db.create_order(passenger_id)
+            await self.send_message(passenger_id, order_id, "Отправьте сообщение с местом, откуда Вас нужно забрать", 'passenger_send_location')
+            message = await self.send_message(passenger_id, order_id, "Или нажмите кнопку '🧭Отправить геопозицию'", 'passenger_cancel')
+            await self.set_state(state, 'order_id', order_id)
+            await self.set_state(state, 'previous_message', message)
+        await self.answer_callback_query(callback_query)
         
 
 class NewOrderFrom(OrderBaseHandler):
@@ -142,7 +143,7 @@ class DriverAccept(OrderBaseHandler):
         await self.send_message(driver_id, order_id, text, 'driver_cancel_wait')
         text = f"Машина найдена. Ваш водитель, {driver_name}, приедет на {driver_car}\nТелефон для связи с водителем {driver_phone_number}"
         await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverHide(OrderBaseHandler):
@@ -150,7 +151,7 @@ class DriverHide(OrderBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
         await self.delete_old_messages(message_id=message_id)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverReturn(OrderBaseHandler):
@@ -167,7 +168,7 @@ class DriverReturn(OrderBaseHandler):
         await self.show_order(order=order, chat_id=passenger_id)
         text = f"Мы продолжаем искать Вам машину"
         await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverWait(OrderBaseHandler):
@@ -177,7 +178,7 @@ class DriverWait(OrderBaseHandler):
         order = self._db.update_wait_dt(order_id)
         await self.edit_reply_markup(callback_query, 'driver_cancel_pick', order_id)
         await self.send_message(order.passenger_id, order_id, text=f"Водитель ожидает")
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverPick(OrderBaseHandler):
@@ -188,7 +189,7 @@ class DriverPick(OrderBaseHandler):
         self._db.update_pick_dt(order_id)
         await self.send_message(order.passenger_id, order_id, text=f"Начало поездки")
         await self.edit_reply_markup(callback_query, 'driver_complete', order_id)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverComplete(OrderBaseHandler):
@@ -215,7 +216,7 @@ class DriverComplete(OrderBaseHandler):
         await self.send_message(chat_id=order.passenger_id, order_id=order_id, text=f"Поездка завершена {add_text}", kb_name='passenger_call_taxi')
         await self.send_message(chat_id=driver_id, order_id=order_id, text=f"Поездка завершена (водитель){add_text}")
         await self.show_active_orders(driver_id)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class DriverCancel(OrderBaseHandler):
@@ -230,7 +231,7 @@ class DriverCancel(OrderBaseHandler):
         await self.send_message(chat_id=passenger_id, order_id=order_id, text=f"Водитель отменил поездку", kb_name='passenger_call_taxi')
         await self.send_message(chat_id=driver_id, order_id=order_id, text=f"Вы отменили поездку")
         await self.show_active_orders(driver_id)
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
 
 
 class PassengerCancel(OrderBaseHandler):
@@ -248,5 +249,5 @@ class PassengerCancel(OrderBaseHandler):
             await self.show_active_orders(driver_id)
         if await state.get_state():
             await state.finish()
-        await self._bot.answer_callback_query(callback_query.id)
+        await self.answer_callback_query(callback_query)
         
