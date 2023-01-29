@@ -94,8 +94,8 @@ class BaseHandler:
             chat_id, message_id, order_id = order.chat_id, order.message_id, order.order_id
             try:
                 await self._bot.delete_message(chat_id, message_id)
-            except:
-                self.log_error(chat_id, message_id, order_id, self, f'can`t delete chat_id: {chat_id} message_id: {message_id}')
+            except Exception as err:
+                self.log_error(chat_id, message_id, order_id, self, err)
         self._db.update_log_status(log_ids=[order.log_id for order in orders])
 
     def time_handler(self, dt1, dt2):
@@ -109,19 +109,25 @@ class BaseHandler:
     
     async def send_message(self, chat_id, order_id, text, kb_name=None):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
-        message = await self._bot.send_message(
-            chat_id=chat_id,
-            text=text,
-            reply_markup=kb,
-            parse_mode='html'
-        )
-        self.log_message(chat_id, message.message_id, order_id, self, text)
-        return message
+        try:
+            message = await self._bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                reply_markup=kb,
+                parse_mode='html'
+            )
+            self.log_message(chat_id, message.message_id, order_id, self, text)
+            return message
+        except Exception as err:
+            self.log_error(chat_id, None, order_id, self, err)
 
     async def edit_reply_markup(self, callback_query: types.CallbackQuery, kb_name, order_id):
         chat_id = callback_query.from_user.id
-        message = await callback_query.message.edit_reply_markup(keyboard_generator(self._config.buttons[kb_name], order_id))
-        self.log_info(chat_id, message.message_id, order_id, self, f'edit_kb: {kb_name}')
+        try:
+            message = await callback_query.message.edit_reply_markup(keyboard_generator(self._config.buttons[kb_name], order_id))
+            self.log_info(chat_id, message.message_id, order_id, self, f'edit_kb: {kb_name}')
+        except Exception as err:
+            self.log_error(chat_id, None, order_id, self, err)
 
     async def remove_reply_markup(self, query, order_id):
         chat_id = query.from_user.id
@@ -131,8 +137,11 @@ class BaseHandler:
             message = await query.message.delete_reply_markup()
         self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
     
-    async def discard_reply_markup(self, passenger_id):
-        message = await self._bot.send_message(passenger_id, "msg_text", reply_markup=ReplyKeyboardRemove())
+    async def discard_reply_markup(self, chat_id, order_id):
+        try:
+            message = await self._bot.send_message(chat_id, "msg_text", reply_markup=ReplyKeyboardRemove())
+        except Exception as err:
+            self.log_error(chat_id, None, order_id, self, err)
         await message.delete()
 
     def message_data(self, input_, order_id=None):
@@ -167,15 +176,18 @@ class BaseHandler:
 
     async def send_venue(self, chat_id, lat, lon, destination, price, order_id, kb_name=None):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
-        message = await self._bot.send_venue(
-            chat_id=chat_id,
-            latitude=lat,
-            longitude=lon,
-            title=destination,
-            address=price,
-            reply_markup=kb,
-        )
-        self.log_message(chat_id, message.message_id, order_id, self, f'lat: {lat}; lon: {lon} dest: {destination}; price: {price}')
+        try:
+            message = await self._bot.send_venue(
+                chat_id=chat_id,
+                latitude=lat,
+                longitude=lon,
+                title=destination,
+                address=price,
+                reply_markup=kb,
+            )
+            self.log_message(chat_id, message.message_id, order_id, self, f'lat: {lat}; lon: {lon} dest: {destination}; price: {price}')
+        except Exception as err:
+            self.log_error(chat_id, None, order_id, self, err)
     
     def log_info(self, chat_id, message_id, order_id, _self, message):
         self._db.log_message('INFO', chat_id, message_id, order_id, _self, message, 0)
