@@ -172,7 +172,8 @@ class DataBase:
 
     def create_user(self, message: types.Message):
         user_id = message.from_user.id
-        user = self.get_user_by_id(user_id)
+        # user = self.get_user_by_id(user_id)
+        user = self._session.query(User).filter(User.user_id==user_id).first()
         if not user:
             username = message.from_user.username
             first_name = message.from_user.first_name
