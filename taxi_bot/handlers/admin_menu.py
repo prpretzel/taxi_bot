@@ -32,8 +32,15 @@ class AdminMenu(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-        kb_name = 'admin_menu' if chat_id==self._config.ADMIN_ID else 'moder_menu'
-        await self.send_message(chat_id, order_id, 'Админское меню', kb_name)
+        await self.send_message(chat_id, order_id, 'Админское меню', 'admin_menu')
+        await self.answer_callback_query(callback_query)
+
+
+class ModerMenu(AdminBaseHandler):
+
+    async def __call__(self, callback_query: types.CallbackQuery) -> None: 
+        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        await self.send_message(chat_id, order_id, 'Меню модератора', 'moder_menu')
         await self.answer_callback_query(callback_query)
 
 
