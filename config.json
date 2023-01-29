@@ -23,6 +23,15 @@
         {"data":"driver_start_work", "text":"Начать работу"}
       ]
     },
+    "driver_moder_menu" : {
+      "type" : "inline",
+      "layout" : [2,1],
+      "buttons" : [
+        {"data":"driver_end_work", "text":"Закончить работу"},
+        {"data":"driver_start_work", "text":"Начать работу"},
+        {"data":"moder_menu", "text":"Меню Модератора"}
+      ]
+    },
     "driver_admin_menu" : {
       "type" : "inline",
       "layout" : [2,1],
