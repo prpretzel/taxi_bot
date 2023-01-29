@@ -7,6 +7,7 @@ class StartHandler(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
+        await self.delete_old_messages(chat_id=chat_id)
         await self.send_message(chat_id, order_id, self._config.messages['welcome_message'])
         if not await self.create_user(message):
             return
@@ -39,24 +40,25 @@ class UpdateContact(BaseHandler):
         await self.discard_reply_markup(chat_id)
         await self.send_message(chat_id, None, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         
+
 class HideMessage(BaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         await self.delete_old_messages(message_id=callback_query.message.message_id)
         
+
 class UnexpectedInput(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
-        await self.send_message(chat_id, order_id, self._config.messages['call_taxi_message'], 'call_taxi')
+        await self.send_message(chat_id, order_id, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         
+
 class CancelHandler(BaseHandler):
 
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
         await self.delete_old_messages(chat_id=chat_id)
-        await self.send_message(chat_id, order_id, self._config.messages['call_taxi_message'], 'call_taxi')
+        await self.send_message(chat_id, order_id, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         if await state.get_state():
             await state.finish()
-
-        

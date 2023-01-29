@@ -58,10 +58,11 @@ class DriversStatus(AdminBaseHandler):
         text = [
             f'🟢Свободных водителей: {online}',
             f'🟡На заказах: {busy}',
+            f'🔴Offline: {offline}',
             '----------------'
         ] + text
         text = '\n'.join(text)
-        await self.send_message(chat_id, order_id, text)
+        await self.send_message(chat_id, order_id, text, 'hide_message')
         await self._bot.answer_callback_query(callback_query.id)
 
 
@@ -69,6 +70,7 @@ class InviteBroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        await self.delete_old_messages(chat_id=chat_id)
         await self.send_message(callback_query.from_user.id, order_id, 'Введите текст сообщения:', 'broadcast_cancel')
         await InputMessage.invite_input.set()
         await self._bot.answer_callback_query(callback_query.id)
@@ -78,6 +80,7 @@ class CheckBroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, message: types.Message, state:FSMContext) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
+        await self.discard_reply_markup(chat_id, order_id)
         text = optionals['text']
         await self.set_state(state, 'message', text)
         await InputMessage.next()
@@ -88,13 +91,10 @@ class BroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        await self.delete_old_messages(chat_id=chat_id)
         text = await self.get_state(state, 'message')
         target = callback_query.data.split('@')[-1]
-        if target == 'Moders':
-            users_id = self._config.MODER_IDs
-        else:
-            users_id = [user.user_id for user in self._db.get_group(target).all()]
-        await self.delete_old_messages(message_id=message_id)
+        users_id = [user.user_id for user in self._db.get_group(target).all()]
         for user_id in users_id:
             await self.send_message(user_id, order_id, text, 'hide_message')
         await state.finish()
@@ -106,6 +106,8 @@ class CancelBroadcast(AdminBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
         await self.delete_old_messages(chat_id=chat_id)
+        kb_name = 'admin_menu' if chat_id==self._config.ADMIN_ID else 'moder_menu'
+        await self.send_message(chat_id, order_id, 'Админское меню', kb_name)
         await self._bot.answer_callback_query(callback_query.id)
         if await state.get_state():
             await state.finish()
@@ -116,3 +118,4 @@ class DeleteOldLogs(AdminBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
         self._db.delete_old_logs(expire_hours=1)
+        

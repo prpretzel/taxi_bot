@@ -77,7 +77,7 @@ def register_handlers(
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['restart'], state='*')
     dp.register_message_handler(UpdateContact(*INSTANCES), content_types=['contact'])
     dp.register_message_handler(HelpHandler(*INSTANCES), commands=['help'], state='*')
-    dp.register_message_handler(JobHandler(*INSTANCES), commands=['job'])
+    dp.register_message_handler(JobHandler(*INSTANCES), commands=['job'], state='*')
     dp.register_callback_query_handler(HideMessage(*INSTANCES), L('hide_message'), state='*')
     dp.register_message_handler(CancelHandler(*INSTANCES), commands=['cancel'], state='*')
     dp.register_my_chat_member_handler(MemberStatus(*INSTANCES))
@@ -120,8 +120,9 @@ def register_handlers(
     dp.register_callback_query_handler(DeleteOldLogs(*INSTANCES), ADMIN_COND, L('delete_old_logs'))
 
     # unexpected input
-    dp.register_message_handler(CancelHandler(*INSTANCES), commands=['cancel'], state='*')
     dp.register_message_handler(UnexpectedInput(*INSTANCES), content_types=['any'], state='*')
+    dp.register_message_handler(CancelHandler(*INSTANCES), state='*')
+    dp.register_callback_query_handler(CancelHandler(*INSTANCES), state='*')
     
 
     logger.info('Handlers are registered')
