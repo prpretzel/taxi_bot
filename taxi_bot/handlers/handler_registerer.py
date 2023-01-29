@@ -112,6 +112,7 @@ def register_handlers(
     
     # admin/moder menu
     dp.register_callback_query_handler(AdminMenu(*INSTANCES), MODER_COND, L('admin_menu'))
+    dp.register_callback_query_handler(AdminMenu(*INSTANCES), MODER_COND, L('moder_menu'))
     dp.register_callback_query_handler(DriversStatus(*INSTANCES), MODER_COND, L('drivers_status'))
     dp.register_callback_query_handler(InviteBroadcastMessage(*INSTANCES), ADMIN_COND, L('invite_broadcast'))
     dp.register_message_handler(CheckBroadcastMessage(*INSTANCES), ADMIN_COND, state=InputMessage.invite_input)
