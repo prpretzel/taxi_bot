@@ -72,6 +72,16 @@ def register_handlers(
     
     def L(startswith):
         return lambda c: c.data.startswith(startswith)
+    
+    # admin/moder menu
+    dp.register_callback_query_handler(AdminMenu(*INSTANCES), MODER_COND, L('admin_menu'), state='*')
+    dp.register_callback_query_handler(ModerMenu(*INSTANCES), MODER_COND, L('moder_menu'), state='*')
+    dp.register_callback_query_handler(DriversStatus(*INSTANCES), MODER_COND, L('drivers_status'), state='*')
+    dp.register_callback_query_handler(InviteBroadcastMessage(*INSTANCES), ADMIN_COND, L('invite_broadcast'))
+    dp.register_message_handler(CheckBroadcastMessage(*INSTANCES), ADMIN_COND, state=InputMessage.invite_input)
+    dp.register_callback_query_handler(BroadcastMessage(*INSTANCES), ADMIN_COND, L('broadcast'), state=InputMessage.message)
+    dp.register_callback_query_handler(CancelBroadcast(*INSTANCES), ADMIN_COND, L('cancel_broadcast'), state='*')
+    dp.register_callback_query_handler(DeleteOldLogs(*INSTANCES), ADMIN_COND, L('delete_old_logs'))
 
     # main handlers
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['start'], state='*')
@@ -110,16 +120,6 @@ def register_handlers(
     dp.register_callback_query_handler(DriverComplete(*INSTANCES), L('driver_complete'))
     dp.register_callback_query_handler(DriverCancel(*INSTANCES), L('driver_cancel'))
     dp.register_callback_query_handler(PassengerCancel(*INSTANCES), L('passenger_cancel'), state='*')
-    
-    # admin/moder menu
-    dp.register_callback_query_handler(AdminMenu(*INSTANCES), MODER_COND, L('admin_menu'))
-    dp.register_callback_query_handler(ModerMenu(*INSTANCES), MODER_COND, L('moder_menu'))
-    dp.register_callback_query_handler(DriversStatus(*INSTANCES), MODER_COND, L('drivers_status'))
-    dp.register_callback_query_handler(InviteBroadcastMessage(*INSTANCES), ADMIN_COND, L('invite_broadcast'))
-    dp.register_message_handler(CheckBroadcastMessage(*INSTANCES), ADMIN_COND, state=InputMessage.invite_input)
-    dp.register_callback_query_handler(BroadcastMessage(*INSTANCES), ADMIN_COND, L('broadcast'), state=InputMessage.message)
-    dp.register_callback_query_handler(CancelBroadcast(*INSTANCES), ADMIN_COND, L('cancel_broadcast'), state='*')
-    dp.register_callback_query_handler(DeleteOldLogs(*INSTANCES), ADMIN_COND, L('delete_old_logs'))
 
     # unexpected input
     dp.register_message_handler(UnexpectedInput(*INSTANCES), content_types=['any'], state='*')
