@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, Identity, BigInteger, JSON
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, Identity, BigInteger, JSON, func, Sequence
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 from sqlalchemy.orm import sessionmaker
@@ -44,7 +44,7 @@ class User(Base):
 class Order(Base):
     __tablename__ = 'orders'
 
-    order_id = Column('order_id', Integer, Identity(), primary_key=True)
+    order_id = Column('order_id', Integer, Sequence(f'{__tablename__}_order_id_seq'), primary_key=True)
     order_dt = Column('order_dt', DateTime)
     accept_dt = Column('accept_dt', DateTime)
     wait_dt = Column('wait_dt', DateTime)
@@ -67,7 +67,7 @@ class Order(Base):
 class Shift(Base):
     __tablename__ = 'shifts'
 
-    shift_id = Column('shift_id', Integer, Identity(), primary_key=True)
+    shift_id = Column('shift_id', Integer, Sequence(f'{__tablename__}_shift_id_seq'), primary_key=True)
     driver_id = Column('driver_id', BigInteger)
     shift_start = Column('shift_start', DateTime)
     shift_end = Column('shift_end', DateTime)
@@ -85,8 +85,8 @@ class Shift(Base):
 class Log_Message(Base):
     __tablename__ = 'logs'
 
-    log_id = Column('log_id', Integer, Identity(), primary_key=True)
-    date_time = Column('date_time', DateTime)
+    log_id = Column('log_id', Integer, Sequence(f'{__tablename__}_log_id_seq'), primary_key=True)
+    date_time = Column('date_time', DateTime, server_default=func.current_timestamp())
     level = Column('level', String)
     chat_id = Column('chat_id', BigInteger)
     message_id = Column('message_id', Integer)
@@ -160,6 +160,8 @@ class DataBase:
             return users.filter(User.driver_status.is_(None))
         elif group=='Driver':
             return users.filter(User.driver_status!=0)
+        elif group=='Moder':
+            return users.filter(User.user_id.in_(config.MODER_IDs))
         else:
             return users
 
