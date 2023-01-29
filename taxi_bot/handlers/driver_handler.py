@@ -109,6 +109,11 @@ class DriverName(DriverBaseHandler):
         chat_id, message_id, order_id, optionals = self.message_data(message)
         previous_message = await self.get_state(state, 'previous_message')
         await self.remove_reply_markup(previous_message, order_id)
+        if len(optionals['text']) > 30:
+            text = "Краткость - сестра таланта 😉"
+            message = await self.send_message(chat_id, order_id, text, 'driver_cancel_registration')
+            await self.set_state(state, 'previous_message', message)
+            return
         await self.set_state(state, 'name', optionals['text'])
         await DriverJobApplience.next()
         text = 'Введите цвет, марку и регистрационный номер автомобиля (пример: Зеленый Фольксваген А114КВ):'
@@ -122,6 +127,11 @@ class DriverCar(DriverBaseHandler):
         chat_id, message_id, order_id, optionals = self.message_data(message)
         previous_message = await self.get_state(state, 'previous_message')
         await self.remove_reply_markup(previous_message, order_id)
+        if len(optionals['text']) > 30:
+            text = "Краткость - сестра таланта 😉"
+            message = await self.send_message(chat_id, order_id, text, 'driver_cancel_registration')
+            await self.set_state(state, 'previous_message', message)
+            return
         await self.set_state(state, 'car', optionals['text'])
         await DriverJobApplience.next()
         name = await self.get_state(state, 'name')
@@ -202,6 +212,8 @@ class DriverStartWork(DriverBaseHandler):
             text = 'Вы начали свой рабочий день'
             self._db.update_driver_status(chat_id, 100)
             self._db.driver_start_shift(chat_id)
+        else:
+            text = status
         await self.send_message(chat_id, order_id, text)
         await self.show_active_orders(chat_id)
         await self._bot.answer_callback_query(callback_query.id)
