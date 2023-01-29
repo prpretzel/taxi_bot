@@ -166,13 +166,12 @@ class DataBase:
             return users
 
     def update_activity(self, user_id, activity_status):
-        user = self.get_user_by_id(user_id)
+        user = self._session.query(User).filter(User.user_id==user_id).first()
         user.active = activity_status
         self._session.commit()
 
     def create_user(self, message: types.Message):
         user_id = message.from_user.id
-        # user = self.get_user_by_id(user_id)
         user = self._session.query(User).filter(User.user_id==user_id).first()
         if not user:
             username = message.from_user.username
