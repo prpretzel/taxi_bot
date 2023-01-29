@@ -38,7 +38,6 @@ class NewOrder(OrderBaseHandler):
         if not await self.create_user(callback_query):
             return
         passenger_id, message_id, order_id, optionals = self.message_data(callback_query)
-        # await self.delete_old_messages(message_id=message_id)
         await self.delete_old_messages(chat_id=passenger_id)
         active_order = self._db.get_user_active_order(passenger_id)
         if active_order:
@@ -62,10 +61,14 @@ class NewOrderFrom(OrderBaseHandler):
         previous_message = await self.get_state(state, 'previous_message')
         await self.remove_reply_markup(previous_message, order_id)
         location_from = optionals['location'] if 'location' in optionals else optionals['text']
+        if len(location_from) > 120:
+            text = "Краткость - сестра таланта 😉"
+            message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
+            return
         self._db.update_order_location_from(order_id, location_from)
         await self.set_state(state, 'location_from', location_from)
-        await self.discard_reply_markup(passenger_id)
-        text = "Куда вы хотите ехать?"
+        await self.discard_reply_markup(passenger_id, order_id)
+        text = "Куда Вы хотите ехать?"
         message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
         await self.set_state(state, 'previous_message', message)
         await OrderForm.next()
@@ -79,6 +82,10 @@ class NewOrderToText(OrderBaseHandler):
         previous_message = await self.get_state(state, 'previous_message')
         await self.remove_reply_markup(previous_message, order_id)
         location_to = optionals['location'] if 'location' in optionals else optionals['text']
+        if len(location_to) > 120:
+            text = "Краткость - сестра таланта 😉"
+            message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
+            return
         self._db.update_order_location_to(order_id, location_to)
         text = "Укажите Вашу цену:"
         message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
@@ -94,7 +101,7 @@ class NewOrderPrice(OrderBaseHandler):
         previous_message = await self.get_state(state, 'previous_message')
         await self.remove_reply_markup(previous_message, order_id)
         price = optionals['text']
-        if re.match('^\d+$', price):
+        if re.match('^\d{1,10}$', price):
             self._db.update_order_price(order_id, price)
             await state.finish()
             await self.delete_old_messages(chat_id=passenger_id)
@@ -105,7 +112,7 @@ class NewOrderPrice(OrderBaseHandler):
             text = f"Идет поиск машины...\nВодителей на линии: {self._db.get_available_drivers_count()}"
             message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
         else:
-            text="Введите стоимость поездки в рублях (например 250)"
+            text = "Введите стоимость поездки в рублях (например 250)"
             message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
         await self.set_state(state, 'previous_message', message)
 
@@ -153,6 +160,7 @@ class DriverReturn(OrderBaseHandler):
         order = self._db.update_order_driver_none(order_id, driver_id)
         passenger_id = order.passenger_id
         await self.delete_old_messages(order_id=order_id)
+        self._db.update_order(order_id, 100)
         self._db.update_driver_status(driver_id, 100)
         for chat_id in self._db.get_drivers_id(100):
             await self.show_order(order=order, chat_id=chat_id, kb_name='driver_accept_refuse')
