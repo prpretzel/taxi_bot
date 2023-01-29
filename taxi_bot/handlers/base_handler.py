@@ -200,3 +200,10 @@ class BaseHandler:
 
     def tg_user_link(self, chat_id, first_name):
         return f'<a href="tg://user?id={chat_id}">{first_name}</a>'
+    
+    async def answer_callback_query(self, callback_query):
+        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        try:
+            await self._bot.answer_callback_query(callback_query.id)
+        except Exception as err:
+            self.log_error(chat_id, message_id, order_id, self, err)

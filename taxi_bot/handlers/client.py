@@ -18,7 +18,8 @@ class HelpHandler(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
-        await self.send_message(chat_id, order_id, self._config.messages['help_message'], 'passenger_call_taxi')
+        text = self._config.messages['help_message'] + f"\n Ваш ID: <code>{chat_id}</code>"
+        await self.send_message(chat_id, order_id, text, 'passenger_call_taxi')
         
 
 class MemberStatus(BaseHandler):
@@ -37,20 +38,23 @@ class UpdateContact(BaseHandler):
         chat_id, message_id, order_id, optionals = self.message_data(message)
         phone_number = optionals['phone_number']
         self._db.update_phone_number(chat_id, phone_number)
-        await self.discard_reply_markup(chat_id)
+        await self.discard_reply_markup(chat_id, order_id)
         await self.send_message(chat_id, None, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         
 
 class HideMessage(BaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        await self.delete_old_messages(message_id=callback_query.message.message_id)
+        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        await self.delete_old_messages(message_id=message_id)
         
 
 class UnexpectedInput(BaseHandler):
 
-    async def __call__(self, message: types.Message) -> None:
+    async def __call__(self, message: types.Message, state: FSMContext) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
+        if await state.get_state():
+            await state.finish()
         await self.send_message(chat_id, order_id, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         
 
