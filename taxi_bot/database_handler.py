@@ -86,7 +86,7 @@ class Log_Message(Base):
     __tablename__ = 'logs'
 
     log_id = Column('log_id', Integer, Sequence(f'{__tablename__}_log_id_seq'), primary_key=True)
-    date_time = Column('date_time', DateTime, server_default=func.current_timestamp())
+    date_time = Column('date_time', DateTime)
     level = Column('level', String)
     chat_id = Column('chat_id', BigInteger)
     message_id = Column('message_id', Integer)
