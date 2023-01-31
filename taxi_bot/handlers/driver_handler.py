@@ -27,6 +27,7 @@ class DriverBaseHandler(BaseHandler):
             logger: Logger,
         ):
         super().__init__(db, bot, config, kbs, logger)
+        self.link = '\nЧат водителей по ссылке: https://t.me/+bNnsHC1MSQo0MzU0'
     
     def create_shift_report(self, shift):
         start_shift = shift.shift_start
@@ -60,21 +61,23 @@ class JobHandler(DriverBaseHandler):
         chat_id, message_id, order_id, optionals = self.message_data(message)
         if not await self.create_user(message):
             return
-        if chat_id in self._db.get_drivers_id():
-            driver = self._db.get_user_by_id(chat_id)
-            status = driver.driver_status
+        driver = self._db.get_user_by_id(chat_id)
+        driver_status = driver.driver_status
+        if driver_status:
             if chat_id==self._config.ADMIN_ID: 
                 kb_name='driver_admin_menu'
             elif chat_id in self._config.MODER_IDs: 
                 kb_name='driver_moder_menu'
             else: 
                 kb_name='driver_menu'
-            if status in [100,150]:
+            if driver_status in [100,150]:
                 active_shift = self._db.get_active_shift_by_driver_id(chat_id)
                 report = self.create_shift_report(active_shift)
-                text = 'Вы сейчас на смене.\n' + report
-            elif status==50:
-                text = "Вы сейчас не на смене. Нажмите 'Начать работу' чтобы получать заказы"
+                text = 'Вы сейчас на смене.\n' + report + self.link
+            elif driver_status==50:
+                text = "Вы сейчас не на смене. Нажмите 'Начать работу' чтобы получать заказы" + self.link
+            elif driver_status==30:
+                text = "Ваш аккаунт временно заблокирован. Напишите в поддержку @Boguchar_taxi_support"
         else:
             text = self._config.messages['job_message']
             kb_name = 'job_menu'
@@ -170,9 +173,10 @@ class DriverAccepted(DriverBaseHandler):
         driver_id, first_name, car = callback_query.message.text.split('\n')[-1].split('@')
         driver_id = int(driver_id)
         self._db.create_driver(driver_id, first_name, car)
-        await self.send_message(chat_id, order_id, 'Водитель принят')
+        await self.delete_old_messages(message_id=message_id)
         await self.delete_old_messages(chat_id=driver_id)
-        text = f"Вы стали водителем. Вы можете выйти на работу использую меню 'Работа в такси' либо через команду /job"
+        await self.send_message(chat_id, order_id, 'Водитель принят')
+        text = f"Вы стали водителем. Вы можете выйти на работу использую меню 'Работа в такси' либо через команду /job" + self.link
         await self.send_message(driver_id, order_id, text)
         await self.answer_callback_query(callback_query)
 
@@ -207,9 +211,9 @@ class DriverStartWork(DriverBaseHandler):
         driver = self._db.get_user_by_id(chat_id)
         status = driver.driver_status
         if status in [100,150]:
-            text = 'Вы уже на смене. Новые заказы будут приходить Вам автоматически.'
+            text = 'Вы уже на смене. Новые заказы будут приходить Вам автоматически.' + self.link
         elif status==50:
-            text = 'Вы начали свой рабочий день'
+            text = 'Вы начали свой рабочий день' + self.link
             self._db.update_driver_status(chat_id, 100)
             self._db.driver_start_shift(chat_id)
         else:
@@ -240,9 +244,9 @@ class DriverStopWork(DriverBaseHandler):
             report = self.create_shift_report(shift)
             self._db.update_driver_status(chat_id, 50)
             await self.delete_old_messages(chat_id=chat_id)
-            await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report, 'driver_menu')
+            await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report + self.link, 'driver_menu')
         elif status==50:
-            await self.send_message(chat_id, None, 'Вы сейчас не работаете')
+            await self.send_message(chat_id, None, 'Вы сейчас не работаете' + self.link)
         await self.answer_callback_query(callback_query)
 
 
