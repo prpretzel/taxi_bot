@@ -165,7 +165,9 @@ class BaseHandler:
                 optionals['location'] = f"{input_.location.latitude}|{input_.location.longitude}"
                 self.log_message(chat_id, message_id, order_id, self, optionals['location'])
             elif 'contact' in input_:
-                optionals['phone_number'] = f'+{input_.contact.phone_number}'
+                phone_number = input_.contact.phone_number
+                if not phone_number.startswith('+'):
+                    optionals['phone_number'] = '+' + phone_number
                 self.log_message(chat_id, message_id, order_id, self, optionals['phone_number'])
             else:
                 self.log_message(chat_id, message_id, order_id, self, input_.content_type)
