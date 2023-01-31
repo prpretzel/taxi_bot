@@ -127,8 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-credentials.json
-credentials_US.json
+credentials*
 database.sqlite
 database
 log.log
