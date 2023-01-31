@@ -126,7 +126,4 @@ def register_handlers(
     dp.register_message_handler(CancelHandler(*INSTANCES), state='*')
     dp.register_callback_query_handler(CancelHandler(*INSTANCES), state='*')
     
-
     logger.info('Handlers are registered')
-
-    
