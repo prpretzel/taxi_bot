@@ -356,27 +356,3 @@ class DataBase:
         shift.shift_end = datetime.now()
         self._session.commit()
         return shift
-
-    def get_shifts(self):
-        query_shifts = self._session.query(
-                User.user_id, 
-                User.first_name,
-                User.driver_registration_date,
-                User.driver_car,
-                Shift.shift_id,
-                Shift.shift_start,
-                Shift.shift_end,
-                Shift.total_trips,
-                Shift.total_income,
-            ).join(Shift, User.user_id == Shift.driver_id)
-
-        query_orders = self._session.query(
-                Order.driver_id, 
-                User.first_name,
-                User.driver_car,
-                Order.order_dt,
-                Order.accept_dt,
-                Order.end_dt,
-            ).outerjoin(Order, User.user_id == Order.driver_id)
-        
-        return query_shifts, query_orders
