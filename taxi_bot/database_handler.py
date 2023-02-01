@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import List, Tuple
 from taxi_bot.load_config import Config
 from aiogram import types
-config = Config()
 
 
 class User(Base):
@@ -106,28 +105,36 @@ class Log_Message(Base):
         self.shown = shown
 
 
-class DataBase:
+class DataBase(Config):
     
-    def __init__(self):
+    def __init__(self, creds_path=None):
+        if creds_path is None:
+            return
+        
         import os
-        if config.GCLOUD_CREDS_PATH:
-            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = config.GCLOUD_CREDS_PATH
+        import json
+
+        with open(creds_path, encoding='UTF-8') as f:
+            self.config: dict = json.load(f)
+        
+        if self.config['GCLOUD_CREDS_PATH']:
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = self.config['GCLOUD_CREDS_PATH']
 
         def getconn():
             from google.cloud.sql.connector import Connector
             connector = Connector()
             conn = connector.connect(
-                config.INSTANCE_CONNECTION_NAME,
+                self.config['INSTANCE_CONNECTION_NAME'],
                 "pg8000",
-                user=config.DB_USER,
-                password=config.DB_PASS,
-                db=config.DB_NAME,
+                user=self.config['DB_USER'],
+                password=self.config['DB_PASS'],
+                db=self.config['DB_NAME'],
             )
             return conn
         
-        engine = create_engine(f"postgresql+pg8000://", creator=getconn)
-        Base.metadata.create_all(bind=engine)
-        Session = sessionmaker(bind=engine)
+        self.engine = create_engine(f"postgresql+pg8000://", creator=getconn)
+        Base.metadata.create_all(bind=self.engine)
+        Session = sessionmaker(bind=self.engine)
         self._session = Session()
 
     def log_message(self, level, chat_id, message_id, order_id, _self, message, shown):
@@ -142,16 +149,15 @@ class DataBase:
             log_message.shown = 0
         self._session.commit()
 
-    def delete_old_logs(self, expire_hours=24):
+    def delete_old_logs(self, expire_hours=120):
         pass
         # from datetime import timedelta
         # expire_time = datetime.now() - timedelta(hours=expire_hours)
-        # logs = (
+        # (
         #     self._session.query(Log_Message)
         #     .filter(Log_Message.shown==0)
         #     .filter(Log_Message.date_time < expire_time)
-        # )
-        # logs.delete()
+        # ).delete()
         # self._session.commit()
 
     def get_group(self, group=None):
@@ -161,7 +167,7 @@ class DataBase:
         elif group=='Driver':
             return users.filter(User.driver_status!=0)
         elif group=='Moder':
-            return users.filter(User.user_id.in_(config.MODER_IDs))
+            return users.filter(User.user_id.in_(self.config.MODER_IDs))
         else:
             return users
 

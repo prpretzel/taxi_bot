@@ -1,14 +1,21 @@
 from aiogram import executor
 from taxi_bot.create_bot import CreateBot
-from taxi_bot.database_handler import DataBase
+import sys
 
 if __name__ == '__main__': 
-    # db = DataBase()
-    bot = CreateBot()
-    # bot.register_handlers()
+    
+    try:
+        creds_path = sys.argv[1]
+    except:
+        creds_path = 'credentials_test.json'
+
+    print(f'USED CREDENTIALS: {creds_path}')
+
+    bot = CreateBot(creds_path)
     executor.start_polling(
         bot.dp, 
         skip_updates=True, 
         on_startup=bot.startup, 
         on_shutdown=bot.shutdown
     )
+    
