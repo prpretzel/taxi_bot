@@ -38,6 +38,7 @@ class UpdateContact(BaseHandler):
         phone_number = optionals['phone_number']
         self._db.update_phone_number(chat_id, phone_number)
         await self.discard_reply_markup(chat_id, order_id)
+        await self.send_message(chat_id, None, f'Пожалуйста, удостовертись в том, что указанный Вами номер телефона ({phone_number}) является активным. В ином случае напишите в поддержку @Boguchar_taxi_support')
         await self.send_message(chat_id, None, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         
 
