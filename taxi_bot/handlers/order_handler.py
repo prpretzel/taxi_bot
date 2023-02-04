@@ -139,7 +139,7 @@ class DriverAccept(OrderBaseHandler):
         self._db.update_driver_status(driver_id, 150)
         await self.show_order(order, passenger_id)
         await self.show_order(order, driver_id)
-        text = f'Ваш заказ #{order_id}\nТелефон для связи с пассажиром {passenger_phone_number}'
+        text = f"Ваш заказ #{order_id}\nТелефон для связи с пассажиром {passenger_phone_number}\nЧат с пассажиром: {self.tg_user_link(passenger_id, 'Открыть чат')}"
         await self.send_message(driver_id, order_id, text, 'driver_cancel_wait')
         text = f"Машина найдена. Ваш водитель, {driver_name}, приедет на {driver_car}\nТелефон для связи с водителем {driver_phone_number}"
         await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
