@@ -78,13 +78,15 @@ class BaseHandler:
                 f"Куда: {title}",
                 f"Стоимость: {address}",
             ]
+            if chat_id == self._config.ADMIN_ID:
+                passenger = self._db.get_user_by_id(order.passenger_id)
+                text.append(f"Телефон: {passenger.phone_number}")
+                text.append(f"{self.tg_user_link(order.passenger_id, 'Telegram')}")
             text = '\n'.join(text)
             await self.send_message(chat_id, order_id, text, kb_name)
 
     async def show_active_orders(self, driver_id):
         active_orders = self._db.get_orders(100)
-        # text = 'Новые заказы:' if active_orders else 'Новых заказов нет'
-        # await self.send_message(driver_id, None, text)
         for order in active_orders:
             await self.show_order(order, driver_id, 'driver_accept_refuse')
 
