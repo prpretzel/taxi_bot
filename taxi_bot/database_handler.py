@@ -15,8 +15,35 @@ class User(Base):
     username = Column('username', String)
     first_name = Column('first_name', String)
     last_name = Column('last_name', String)
+    referral = Column('referral', String)
     phone_number = Column('phone_number', String)
     user_registration_date = Column('user_registration_date', DateTime)
+    active = Column('active', Integer, default=1)
+
+    def __init__(
+            self, 
+            user_id, 
+            username, 
+            first_name, 
+            last_name, 
+            referral
+        ):
+        self.user_id = user_id
+        self.username = username
+        self.first_name = first_name
+        self.last_name = last_name
+        self.referral = referral
+        self.user_registration_date = datetime.now()
+        # self.active = 1
+
+
+class Driver(Base):
+    __tablename__ = 'drivers'
+
+    user_id = Column('user_id', BigInteger, primary_key=True)
+    username = Column('username', String)
+    first_name = Column('first_name', String)
+    phone_number = Column('phone_number', String)
     active = Column('active', Integer)
     driver_registration_date = Column('driver_registration_date', DateTime)
     driver_status = Column('driver_status', Integer)
@@ -24,18 +51,19 @@ class User(Base):
     driver_balance = Column('driver_balance', Integer)
     driver_shift_id = Column('driver_shift_id', Integer)
 
-
     def __init__(
             self, 
             user_id, 
             username, 
             first_name, 
-            last_name
+            last_name, 
+            referral
         ):
         self.user_id = user_id
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
+        self.referral = referral
         self.user_registration_date = datetime.now()
         self.active = 1
 
@@ -56,7 +84,6 @@ class Order(Base):
     price = Column('price', Integer)
     order_status = Column('order_status', Integer)
 
-
     def __init__(self, passenger_id):
         self.order_dt = datetime.now()
         self.passenger_id = passenger_id
@@ -72,7 +99,6 @@ class Shift(Base):
     shift_end = Column('shift_end', DateTime)
     total_trips = Column('total_trips', Integer)
     total_income = Column('total_income', Integer)
-
 
     def __init__(self, driver_id):
         self.driver_id = driver_id
@@ -176,14 +202,14 @@ class DataBase(Config):
         user.active = activity_status
         self._session.commit()
 
-    def create_user(self, message: types.Message):
+    def create_user(self, message: types.Message, referral=None):
         user_id = message.from_user.id
         user = self._session.query(User).filter(User.user_id==user_id).first()
         if not user:
             username = message.from_user.username
             first_name = message.from_user.first_name
             last_name = message.from_user.last_name
-            new_passenger = User(user_id, username, first_name, last_name)
+            new_passenger = User(user_id, username, first_name, last_name, referral)
             self._session.add(new_passenger)
         else:
             user.active = 1
