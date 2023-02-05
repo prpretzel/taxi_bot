@@ -202,7 +202,7 @@ class DataBase(Config):
         user.active = activity_status
         self._session.commit()
 
-    def create_user(self, message: types.Message, referral=None):
+    def create_user(self, message: types.Message, referral):
         user_id = message.from_user.id
         user = self._session.query(User).filter(User.user_id==user_id).first()
         if not user:

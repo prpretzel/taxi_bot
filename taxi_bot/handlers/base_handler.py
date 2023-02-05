@@ -47,8 +47,8 @@ class BaseHandler:
         except KeyError:
             return 
 
-    async def create_user(self, message):
-        phone_number = self._db.create_user(message)
+    async def create_user(self, message, referral=None):
+        phone_number = self._db.create_user(message, referral)
         chat_id = message.from_user.id
         if not phone_number:
             text = "Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку '📞Оставить свой контакт', чтобы водители могли позвонить Вам для уточнения информации по вашему заказу."
