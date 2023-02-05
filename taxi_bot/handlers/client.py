@@ -7,7 +7,8 @@ class StartHandler(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
-        referral = optionals['text'].replace(r'/start ', '')
+        referral = optionals['text'].replace(r'/start', '').replace(r' ', '')
+        referral = referral if referral else None
         await self.delete_old_messages(chat_id=chat_id)
         await self.send_message(chat_id, order_id, self._config.messages['welcome_message'])
         if not await self.create_user(message, referral):

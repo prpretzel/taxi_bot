@@ -15,9 +15,14 @@ class User(Base):
     username = Column('username', String)
     first_name = Column('first_name', String)
     last_name = Column('last_name', String)
-    referral = Column('referral', String)
     phone_number = Column('phone_number', String)
     user_registration_date = Column('user_registration_date', DateTime)
+    driver_registration_date = Column('driver_registration_date', DateTime)
+    driver_status = Column('driver_status', Integer)
+    driver_car = Column('driver_car', String)
+    driver_balance = Column('driver_balance', Integer)
+    driver_shift_id = Column('driver_shift_id', Integer)
+    referral = Column('referral', String)
     active = Column('active', Integer, default=1)
 
     def __init__(
@@ -34,38 +39,6 @@ class User(Base):
         self.last_name = last_name
         self.referral = referral
         self.user_registration_date = datetime.now()
-        # self.active = 1
-
-
-class Driver(Base):
-    __tablename__ = 'drivers'
-
-    user_id = Column('user_id', BigInteger, primary_key=True)
-    username = Column('username', String)
-    first_name = Column('first_name', String)
-    phone_number = Column('phone_number', String)
-    active = Column('active', Integer)
-    driver_registration_date = Column('driver_registration_date', DateTime)
-    driver_status = Column('driver_status', Integer)
-    driver_car = Column('driver_car', String)
-    driver_balance = Column('driver_balance', Integer)
-    driver_shift_id = Column('driver_shift_id', Integer)
-
-    def __init__(
-            self, 
-            user_id, 
-            username, 
-            first_name, 
-            last_name, 
-            referral
-        ):
-        self.user_id = user_id
-        self.username = username
-        self.first_name = first_name
-        self.last_name = last_name
-        self.referral = referral
-        self.user_registration_date = datetime.now()
-        self.active = 1
 
     
 class Order(Base):
