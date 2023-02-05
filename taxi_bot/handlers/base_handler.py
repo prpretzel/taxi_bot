@@ -132,12 +132,15 @@ class BaseHandler:
             self.log_error(chat_id, None, order_id, self, err)
 
     async def remove_reply_markup(self, query, order_id):
-        chat_id = query.from_user.id
-        if isinstance(query, types.Message):
-            message = await query.delete_reply_markup()
-        elif isinstance(query, types.CallbackQuery):
-            message = await query.message.delete_reply_markup()
-        self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
+        chat_id, message_id, order_id, optionals = self.message_data(query)
+        try:
+            if isinstance(query, types.Message):
+                message = await query.delete_reply_markup()
+            elif isinstance(query, types.CallbackQuery):
+                message = await query.message.delete_reply_markup()
+            self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
+        except Exception as err:
+            self.log_error(chat_id, message_id, order_id, self, err)
     
     async def discard_reply_markup(self, chat_id, order_id):
         try:
