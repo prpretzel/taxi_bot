@@ -8,6 +8,7 @@ from taxi_bot.handlers.client import (
     HelpHandler,
     UpdateContact,
     MemberStatus,
+    ReferralProgram,
     HideMessage,
     UnexpectedInput,
     CancelHandler
@@ -88,6 +89,7 @@ def register_handlers(
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['restart'], state='*')
     dp.register_message_handler(UpdateContact(*INSTANCES), content_types=['contact'])
     dp.register_message_handler(HelpHandler(*INSTANCES), commands=['help'], state='*')
+    dp.register_message_handler(ReferralProgram(*INSTANCES), commands=['referral'], state='*')
     dp.register_message_handler(JobHandler(*INSTANCES), commands=['job'], state='*')
     dp.register_callback_query_handler(HideMessage(*INSTANCES), L('hide_message'), state='*')
     dp.register_message_handler(CancelHandler(*INSTANCES), commands=['cancel'], state='*')
