@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import json
 from xlrd import open_workbook_xls as open_xls
-from typing import List
+from typing import List, Dict
 
 @dataclass(init=False)
 class Config:
@@ -10,7 +10,7 @@ class Config:
     PAYMENT_TOKEN : str
     ADMIN_ID : str
     MODER_IDs : List[str]
-    messages : dict[str]
+    messages : Dict[str]
     buttons : List[dict]
 
     def __init__(self, creds_path) -> None:
