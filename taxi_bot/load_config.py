@@ -10,7 +10,7 @@ class Config:
     PAYMENT_TOKEN : str
     ADMIN_ID : str
     MODER_IDs : List[str]
-    messages : Dict[str]
+    messages : Dict
     buttons : List[dict]
 
     def __init__(self, creds_path) -> None:
