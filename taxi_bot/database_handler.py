@@ -138,6 +138,7 @@ class DataBase(Config):
 
     def log_message(self, level, chat_id, message_id, order_id, _self, message, shown):
         source = _self.__class__.__name__
+        message = message[:50]
         log = Log_Message(level, chat_id, message_id, order_id, source, message, shown)
         self._session.add(log)
         self._session.commit()
