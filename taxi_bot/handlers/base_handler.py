@@ -47,7 +47,7 @@ class BaseHandler:
         except KeyError:
             return 
 
-    async def create_user(self, message, referral):
+    async def create_user(self, message, referral=None):
         phone_number = self._db.create_user(message, referral)
         chat_id = message.from_user.id
         if not phone_number:
