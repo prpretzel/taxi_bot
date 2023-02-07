@@ -11,7 +11,7 @@ class Config:
     ADMIN_ID : str
     MODER_IDs : List[str]
     messages : Dict
-    buttons : List[dict]
+    buttons : List
 
     def __init__(self, creds_path) -> None:
         with open('config.json', encoding='UTF-8') as f:
