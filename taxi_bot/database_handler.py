@@ -167,7 +167,7 @@ class DataBase(Config):
         elif group=='Driver':
             return users.filter(User.driver_status!=0)
         elif group=='Moder':
-            return users.filter(User.user_id.in_(self.config.MODER_IDs))
+            return users.filter(User.user_id.in_(self.config['MODER_IDs']))
         else:
             return users
 
