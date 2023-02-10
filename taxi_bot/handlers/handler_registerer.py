@@ -56,6 +56,7 @@ from taxi_bot.handlers.admin_menu import (
     InviteBroadcastMessage,
     CheckBroadcastMessage,
     BroadcastMessage,
+    OrderDetails,
     CancelBroadcast,
     DeleteOldLogs
 )
@@ -82,6 +83,7 @@ def register_handlers(
     dp.register_callback_query_handler(InviteBroadcastMessage(*INSTANCES), ADMIN_COND, L('invite_broadcast'))
     dp.register_message_handler(CheckBroadcastMessage(*INSTANCES), ADMIN_COND, state=InputMessage.invite_input)
     dp.register_callback_query_handler(BroadcastMessage(*INSTANCES), ADMIN_COND, L('broadcast'), state=InputMessage.message)
+    dp.register_callback_query_handler(OrderDetails(*INSTANCES), ADMIN_COND, L('order_details'))
     dp.register_callback_query_handler(CancelBroadcast(*INSTANCES), ADMIN_COND, L('cancel_broadcast'), state='*')
     dp.register_callback_query_handler(DeleteOldLogs(*INSTANCES), ADMIN_COND, L('delete_old_logs'))
 
