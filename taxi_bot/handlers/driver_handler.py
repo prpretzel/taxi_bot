@@ -227,11 +227,14 @@ class DriverActiveOrder(DriverBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
         active_order = self._db.get_drivers_active_order(chat_id)
-        order_id = active_order.order_id
-        order_status = active_order.order_status
-        kb_name = {200:'driver_cancel_wait', 250:'driver_cancel_pick', 300:'driver_complete'}[order_status]
-        await self.delete_old_messages(chat_id=chat_id, order_id=order_id)
-        await self.show_order(active_order, chat_id, kb_name)
+        if active_order:
+            order_id = active_order.order_id
+            order_status = active_order.order_status
+            kb_name = {200:'driver_cancel_wait', 250:'driver_cancel_pick', 300:'driver_complete'}[order_status]
+            await self.delete_old_messages(chat_id=chat_id, order_id=order_id)
+            await self.show_order(active_order, chat_id, kb_name)
+        else:
+            await self.show_order(active_order, chat_id, 'У вас нет активных заказов')
         await self.answer_callback_query(callback_query)
         
 
