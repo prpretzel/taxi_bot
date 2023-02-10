@@ -17,27 +17,28 @@ class User(Base):
     last_name = Column('last_name', String)
     phone_number = Column('phone_number', String)
     user_registration_date = Column('user_registration_date', DateTime)
-    active = Column('active', Integer)
     driver_registration_date = Column('driver_registration_date', DateTime)
     driver_status = Column('driver_status', Integer)
     driver_car = Column('driver_car', String)
     driver_balance = Column('driver_balance', Integer)
     driver_shift_id = Column('driver_shift_id', Integer)
-
+    referral = Column('referral', String)
+    active = Column('active', Integer, default=1)
 
     def __init__(
             self, 
             user_id, 
             username, 
             first_name, 
-            last_name
+            last_name, 
+            referral
         ):
         self.user_id = user_id
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
+        self.referral = referral
         self.user_registration_date = datetime.now()
-        self.active = 1
 
     
 class Order(Base):
@@ -56,7 +57,6 @@ class Order(Base):
     price = Column('price', Integer)
     order_status = Column('order_status', Integer)
 
-
     def __init__(self, passenger_id):
         self.order_dt = datetime.now()
         self.passenger_id = passenger_id
@@ -72,7 +72,6 @@ class Shift(Base):
     shift_end = Column('shift_end', DateTime)
     total_trips = Column('total_trips', Integer)
     total_income = Column('total_income', Integer)
-
 
     def __init__(self, driver_id):
         self.driver_id = driver_id
@@ -139,6 +138,7 @@ class DataBase(Config):
 
     def log_message(self, level, chat_id, message_id, order_id, _self, message, shown):
         source = _self.__class__.__name__
+        message = str(message)[:50]
         log = Log_Message(level, chat_id, message_id, order_id, source, message, shown)
         self._session.add(log)
         self._session.commit()
@@ -150,7 +150,6 @@ class DataBase(Config):
         self._session.commit()
 
     def delete_old_logs(self, expire_hours=120):
-        pass
         # from datetime import timedelta
         # expire_time = datetime.now() - timedelta(hours=expire_hours)
         # (
@@ -159,6 +158,7 @@ class DataBase(Config):
         #     .filter(Log_Message.date_time < expire_time)
         # ).delete()
         # self._session.commit()
+        pass
 
     def get_group(self, group=None):
         users = self._session.query(User).filter(User.active==1)
@@ -167,7 +167,7 @@ class DataBase(Config):
         elif group=='Driver':
             return users.filter(User.driver_status!=0)
         elif group=='Moder':
-            return users.filter(User.user_id.in_(self.config.MODER_IDs))
+            return users.filter(User.user_id.in_(self.config['MODER_IDs']))
         else:
             return users
 
@@ -176,22 +176,23 @@ class DataBase(Config):
         user.active = activity_status
         self._session.commit()
 
-    def create_user(self, message: types.Message):
+    def create_user(self, message: types.Message, referral):
         user_id = message.from_user.id
-        user = self._session.query(User).filter(User.user_id==user_id).first()
+        user: User = self._session.query(User).filter(User.user_id==user_id).first()
         if not user:
             username = message.from_user.username
             first_name = message.from_user.first_name
             last_name = message.from_user.last_name
-            new_passenger = User(user_id, username, first_name, last_name)
+            new_passenger = User(user_id, username, first_name, last_name, referral)
             self._session.add(new_passenger)
+            self._session.commit()
+            phone_number = False
         else:
             user.active = 1
+            phone_number = bool(user.phone_number)
         self._session.commit()
-        return self.check_user_phone_number(user_id)
-
-    def check_user_phone_number(self, user_id):
-        return bool(self.get_user_by_id(user_id).phone_number)
+        return phone_number
+        
 
     def update_phone_number(self, user_id, phone_number):
         user = self.get_user_by_id(user_id)

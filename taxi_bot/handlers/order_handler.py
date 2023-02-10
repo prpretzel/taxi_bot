@@ -35,10 +35,10 @@ class NewOrder(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         if not await self.create_user(callback_query):
+            await self.answer_callback_query(callback_query)
             return
         await OrderForm.order_id.set()
         passenger_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.delete_old_messages(chat_id=passenger_id)
         active_order = self._db.get_user_active_order(passenger_id)
         if active_order:
             order_id = active_order.order_id
@@ -47,7 +47,7 @@ class NewOrder(OrderBaseHandler):
             await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
         else:
             order_id = self._db.create_order(passenger_id)
-            await self.send_message(passenger_id, order_id, "Отправьте сообщение с местом, откуда Вас нужно забрать", 'passenger_send_location')
+            await self.send_message(passenger_id, order_id, "Отправьте сообщение с местом, откуда Вас нужно забрать", 'passenger_send_location', delete_old=True)
             message = await self.send_message(passenger_id, order_id, "Или нажмите кнопку '🧭Отправить геопозицию'", 'passenger_cancel')
             await self.set_state(state, 'order_id', order_id)
             await self.set_state(state, 'previous_message', message)
@@ -105,11 +105,11 @@ class NewOrderPrice(OrderBaseHandler):
         if re.match('^\d{1,10}$', price):
             self._db.update_order_price(order_id, price)
             await state.finish()
-            await self.delete_old_messages(chat_id=passenger_id)
             order = self._db.get_order_by_id(order_id)
-            await self.show_order(order=order, chat_id=passenger_id)
+            await self.show_order(order=order, chat_id=passenger_id, delete_old=True)
             for chat_id in self._db.get_drivers_id(100):
                 await self.show_order(order=order, chat_id=chat_id, kb_name='driver_accept_refuse')
+            await self.show_order(order=order, chat_id=self._config.ADMIN_ID, kb_name='order_details')
             text = f"Идет поиск машины...\nВодителей на линии: {self._db.get_available_drivers_count()}"
             message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
         else:
@@ -127,8 +127,6 @@ class DriverAccept(OrderBaseHandler):
         if not self._db.update_order_driver(order_id, driver_id):
             await self.send_message(driver_id, order_id, 'Заказ был принят другим водителем')
             return
-        await self.delete_old_messages(order_id=order_id)
-        await self.delete_old_messages(chat_id=driver_id)
         driver = self._db.get_user_by_id(driver_id)
         driver_name = driver.first_name
         driver_car = driver.driver_car
@@ -137,7 +135,7 @@ class DriverAccept(OrderBaseHandler):
         passenger_id = order.passenger_id
         passenger_phone_number = self._db.get_user_by_id(passenger_id).phone_number
         self._db.update_driver_status(driver_id, 150)
-        await self.show_order(order, passenger_id)
+        await self.show_order(order, passenger_id, delete_old=True)
         await self.show_order(order, driver_id)
         text = f"Ваш заказ #{order_id}\nТелефон для связи с пассажиром {passenger_phone_number}\nЧат с пассажиром: {self.tg_user_link(passenger_id, 'Открыть чат')}"
         await self.send_message(driver_id, order_id, text, 'driver_cancel_wait')
@@ -150,7 +148,7 @@ class DriverHide(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.delete_old_messages(message_id=message_id)
+        await self.delete_old_messages(message_id=message_id, force=True)
         await self.answer_callback_query(callback_query)
 
 
@@ -160,14 +158,13 @@ class DriverReturn(OrderBaseHandler):
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
         order = self._db.update_order_driver_none(order_id, driver_id)
         passenger_id = order.passenger_id
-        await self.delete_old_messages(order_id=order_id)
         self._db.update_order(order_id, 100)
         self._db.update_driver_status(driver_id, 100)
-        for chat_id in self._db.get_drivers_id(100):
-            await self.show_order(order=order, chat_id=chat_id, kb_name='driver_accept_refuse')
-        await self.show_order(order=order, chat_id=passenger_id)
+        await self.show_order(order=order, chat_id=passenger_id, delete_old=True)
         text = f"Мы продолжаем искать Вам машину"
         await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
+        for chat_id in self._db.get_drivers_id(100):
+            await self.show_order(order=order, chat_id=chat_id, kb_name='driver_accept_refuse')
         await self.answer_callback_query(callback_query)
 
 
@@ -212,8 +209,7 @@ class DriverComplete(OrderBaseHandler):
         add_text = "\n".join(add_text)
         self._db.driver_complete_trip(driver_id, order.price)
         self._db.update_end_dt(order_id)
-        await self.delete_old_messages(order_id)
-        await self.send_message(chat_id=order.passenger_id, order_id=order_id, text=f"Поездка завершена {add_text}", kb_name='passenger_call_taxi')
+        await self.send_message(chat_id=order.passenger_id, order_id=order_id, text=f"Поездка завершена {add_text}", kb_name='passenger_call_taxi', delete_old=True)
         await self.send_message(chat_id=driver_id, order_id=order_id, text=f"Поездка завершена (водитель){add_text}")
         await self.show_active_orders(driver_id)
         await self.answer_callback_query(callback_query)
@@ -223,26 +219,24 @@ class DriverCancel(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.delete_old_messages(order_id)
         order = self._db.update_cancel_dt(order_id)
         self._db.update_order(order_id, order.order_status+7)
         passenger_id = order.passenger_id
         self._db.update_driver_status(driver_id, 100)
-        await self.send_message(chat_id=passenger_id, order_id=order_id, text=f"Водитель отменил поездку", kb_name='passenger_call_taxi')
+        await self.send_message(chat_id=passenger_id, order_id=order_id, text=f"Водитель отменил поездку", kb_name='passenger_call_taxi', delete_old=True)
         await self.send_message(chat_id=driver_id, order_id=order_id, text=f"Вы отменили поездку")
         await self.show_active_orders(driver_id)
         await self.answer_callback_query(callback_query)
-
+        
 
 class PassengerCancel(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
         passenger_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.delete_old_messages(order_id=order_id)
         order = self._db.update_cancel_dt(order_id)
         self._db.update_order(order_id, order.order_status+3)
         driver_id = order.driver_id
-        await self.send_message(chat_id=passenger_id, order_id=order_id, text=f"Вы отменили поездку", kb_name='passenger_call_taxi')
+        await self.send_message(chat_id=passenger_id, order_id=order_id, text=f"Вы отменили поездку", kb_name='passenger_call_taxi', delete_old=True)
         if driver_id:
             await self.send_message(chat_id=driver_id, order_id=order_id, text=f"Пользователь отменил поездку")
             self._db.update_driver_status(driver_id, 100)

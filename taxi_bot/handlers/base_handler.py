@@ -47,19 +47,18 @@ class BaseHandler:
         except KeyError:
             return 
 
-    async def create_user(self, message):
-        phone_number = self._db.create_user(message)
+    async def create_user(self, message, referral=None, phone_number_requaried=True):
+        phone_number = self._db.create_user(message, referral)
         chat_id = message.from_user.id
-        if not phone_number:
-            text = "Пожалуйста, оставьте свой номер телефона для связи, нажав кнопку '📞Оставить свой контакт', чтобы водители могли позвонить Вам для уточнения информации по вашему заказу."
-            await self.send_message(chat_id, None, text, 'request_contact')
+        if phone_number_requaried and not phone_number:
+            await self.send_message(chat_id, None, self._config.messages['phone_number_request'], 'request_contact')
         return phone_number
 
-    async def show_order(self, order, chat_id, kb_name=None):
+    async def show_order(self, order, chat_id, kb_name=None, delete_old=False):
         import re
         order_id = order.order_id
-        title = order.location_to
-        address = f"{order.price} рублей"
+        destination = f"Куда: {order.location_to}"
+        price = f"{order.price} рублей"
         geo = re.match(r'\d{1,3}\.\d+|\d{1,3}\.\d+', order.location_from)
         if geo:
             lat, lon = order.location_from.split('|') 
@@ -67,38 +66,39 @@ class BaseHandler:
                 chat_id=chat_id,
                 lat=lat, 
                 lon=lon, 
-                destination=title,
-                price=address,
+                destination=destination,
+                price=price,
                 order_id=order_id,
-                kb_name=kb_name
+                kb_name=kb_name,
+                delete_old=delete_old,
             )
         else:
             text = [
                 f"Откуда: {order.location_from}",
-                f"Куда: {title}",
-                f"Стоимость: {address}",
+                f"Куда: {destination}",
+                f"Стоимость: {price}",
             ]
-            if chat_id == self._config.ADMIN_ID:
-                passenger = self._db.get_user_by_id(order.passenger_id)
-                text.append(f"Телефон: {passenger.phone_number}")
-                text.append(f"{self.tg_user_link(order.passenger_id, 'Telegram')}")
             text = '\n'.join(text)
-            await self.send_message(chat_id, order_id, text, kb_name)
+            await self.send_message(chat_id, order_id, text, kb_name, delete_old)
 
     async def show_active_orders(self, driver_id):
         active_orders = self._db.get_orders(100)
         for order in active_orders:
             await self.show_order(order, driver_id, 'driver_accept_refuse')
 
-    async def delete_old_messages(self, order_id=None, chat_id=None, message_id=None):
+    async def delete_old_messages(self, order_id=None, chat_id=None, message_id=None, force=False):
         orders = self._db.get_order_messages(order_id=order_id, chat_id=chat_id, message_id=message_id)
+        log_ids = list()
         for order in orders:
             chat_id, message_id, order_id = order.chat_id, order.message_id, order.order_id
+            if (order_id and chat_id == self._config.ADMIN_ID) and (not force):
+                continue
             try:
                 await self._bot.delete_message(chat_id, message_id)
             except Exception as err:
                 self.log_error(chat_id, message_id, order_id, self, err)
-        self._db.update_log_status(log_ids=[order.log_id for order in orders])
+            log_ids.append(order.log_id)
+        self._db.update_log_status(log_ids=log_ids)
 
     def time_handler(self, dt1, dt2):
         if dt1 == dt2:
@@ -109,7 +109,7 @@ class BaseHandler:
         seconds = str(dt%60).zfill(2)
         return f"{hours}:{minutes}:{seconds}"
     
-    async def send_message(self, chat_id, order_id, text, kb_name=None):
+    async def send_message(self, chat_id, order_id, text, kb_name=None, delete_old=False):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
         try:
             message = await self._bot.send_message(
@@ -118,6 +118,10 @@ class BaseHandler:
                 reply_markup=kb,
                 parse_mode='html'
             )
+            if delete_old:
+                await self.delete_old_messages(chat_id=chat_id)
+                if order_id:
+                    await self.delete_old_messages(order_id=order_id)
             self.log_message(chat_id, message.message_id, order_id, self, text)
             return message
         except Exception as err:
@@ -131,13 +135,36 @@ class BaseHandler:
         except Exception as err:
             self.log_error(chat_id, None, order_id, self, err)
 
+    async def send_venue(self, chat_id, lat, lon, destination, price, order_id, kb_name=None, delete_old=False):
+        kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
+        try:
+            message = await self._bot.send_venue(
+                chat_id=chat_id,
+                latitude=lat,
+                longitude=lon,
+                title=destination,
+                address=price,
+                reply_markup=kb,
+            )
+            if delete_old:
+                await self.delete_old_messages(chat_id=chat_id)
+                if order_id:
+                    await self.delete_old_messages(order_id=order_id)
+            text = f'lat: {lat}; lon: {lon} dest: {destination}; price: {price}'
+            self.log_message(chat_id, message.message_id, order_id, self, text)
+        except Exception as err:
+            self.log_error(chat_id, None, order_id, self, err)
+
     async def remove_reply_markup(self, query, order_id):
-        chat_id = query.from_user.id
-        if isinstance(query, types.Message):
-            message = await query.delete_reply_markup()
-        elif isinstance(query, types.CallbackQuery):
-            message = await query.message.delete_reply_markup()
-        self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
+        chat_id, message_id, order_id, optionals = self.message_data(query)
+        try:
+            if isinstance(query, types.Message):
+                message = await query.delete_reply_markup()
+            elif isinstance(query, types.CallbackQuery):
+                message = await query.message.delete_reply_markup()
+            self.log_info(chat_id, message.message_id, order_id, self, 'remove_kb')
+        except Exception as err:
+            self.log_error(chat_id, message_id, order_id, self, err)
     
     async def discard_reply_markup(self, chat_id, order_id):
         try:
@@ -177,23 +204,7 @@ class BaseHandler:
                 self.log_message(chat_id, message_id, order_id, self, input_.content_type)
         else:
             self.log_message(chat_id, message_id, order_id, self, input_.content_type)
-
         return chat_id, message_id, order_id, optionals
-
-    async def send_venue(self, chat_id, lat, lon, destination, price, order_id, kb_name=None):
-        kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
-        try:
-            message = await self._bot.send_venue(
-                chat_id=chat_id,
-                latitude=lat,
-                longitude=lon,
-                title=destination,
-                address=price,
-                reply_markup=kb,
-            )
-            self.log_message(chat_id, message.message_id, order_id, self, f'lat: {lat}; lon: {lon} dest: {destination}; price: {price}')
-        except Exception as err:
-            self.log_error(chat_id, None, order_id, self, err)
     
     def log_info(self, chat_id, message_id, order_id, _self, message):
         self._db.log_message('INFO', chat_id, message_id, order_id, _self, message, 0)
@@ -213,3 +224,29 @@ class BaseHandler:
             await self._bot.answer_callback_query(callback_query.id)
         except Exception as err:
             self.log_error(chat_id, message_id, order_id, self, err)
+            
+    def map_status(self, order_status):
+        status_mapper = {
+            70 : 'Ввод адреса отправления',
+            80 : 'Ввод адреса назначения ',
+            90 : 'Ввод цены              ',
+            73 : 'Отмена пассажиром      ',
+            83 : 'Отмена пассажиром      ',
+            93 : 'Отмена пассажиром      ',
+            100: 'Активный заказ         ',
+            200: 'Взят в работу          ',
+            250: 'Водитель ожидает       ',
+            300: 'В пути                 ',
+            400: 'Заказ завершен         ',
+            103: 'Отмена пассажиром      ',
+            203: 'Отмена пассажиром      ',
+            253: 'Отмена пассажиром      ',
+            303: 'Отмена пассажиром      ',
+            107: 'Отмена водителем       ',
+            207: 'Отмена водителем       ',
+            257: 'Отмена водителем       ',
+            307: 'Отмена водителем       ',
+            50 : 'Отмена пассажиром      ',
+            150: 'Отмена водителем       ',
+        }
+        return status_mapper[order_status]
