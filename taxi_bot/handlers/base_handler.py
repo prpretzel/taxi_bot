@@ -162,7 +162,16 @@ class BaseHandler:
             
     async def edit_message(self, order_id, chat_id, message_id, text, kb_name=None):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
-        await self._bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, reply_markup=kb, parse_mode='html')
+        try:
+            await self._bot.edit_message_text(
+                chat_id=chat_id, 
+                message_id=message_id, 
+                text=text, 
+                reply_markup=kb, 
+                parse_mode='html'
+            )
+        except Exception as err:
+            self.log_error(chat_id, None, order_id, self, err)
 
     async def edit_reply_markup(self, callback_query: types.CallbackQuery, kb_name, order_id):
         chat_id = callback_query.from_user.id
