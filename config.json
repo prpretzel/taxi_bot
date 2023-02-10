@@ -14,7 +14,7 @@
       "buttons" : [
         {"data":"driver_end_work", "text":"Закончить работу"},
         {"data":"driver_start_work", "text":"Начать работу"},
-        {"data":"current_order", "text":"Текущий заказ"}
+        {"data":"driver_active_order", "text":"Текущий заказ"}
       ]
     },
     "driver_moder_menu" : {
@@ -23,7 +23,7 @@
       "buttons" : [
         {"data":"driver_end_work", "text":"Закончить работу"},
         {"data":"driver_start_work", "text":"Начать работу"},
-        {"data":"current_order", "text":"Текущий заказ"},
+        {"data":"driver_active_order", "text":"Текущий заказ"},
         {"data":"moder_menu", "text":"Меню Модератора"}
       ]
     },
@@ -33,7 +33,7 @@
       "buttons" : [
         {"data":"driver_end_work", "text":"Закончить работу"},
         {"data":"driver_start_work", "text":"Начать работу"},
-        {"data":"current_order", "text":"Текущий заказ"},
+        {"data":"driver_active_order", "text":"Текущий заказ"},
         {"data":"admin_menu", "text":"Админское меню"}
       ]
     },
