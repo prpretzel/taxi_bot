@@ -57,7 +57,7 @@ class BaseHandler:
     async def show_order(self, order, chat_id, kb_name=None, delete_old=False):
         import re
         order_id = order.order_id
-        destination = f"Куда: {order.location_to}"
+        destination = order.location_to
         price = f"{order.price} рублей"
         geo = re.match(r'\d{1,3}\.\d+|\d{1,3}\.\d+', order.location_from)
         if geo:
@@ -137,6 +137,7 @@ class BaseHandler:
 
     async def send_venue(self, chat_id, lat, lon, destination, price, order_id, kb_name=None, delete_old=False):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
+        destination = f"Куда: {destination}"
         try:
             message = await self._bot.send_venue(
                 chat_id=chat_id,
