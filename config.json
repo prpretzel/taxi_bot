@@ -10,27 +10,30 @@
     },
     "driver_menu" : {
       "type" : "inline",
-      "layout" : [2],
-      "buttons" : [
-        {"data":"driver_end_work", "text":"Закончить работу"},
-        {"data":"driver_start_work", "text":"Начать работу"}
-      ]
-    },
-    "driver_moder_menu" : {
-      "type" : "inline",
       "layout" : [2,1],
       "buttons" : [
         {"data":"driver_end_work", "text":"Закончить работу"},
         {"data":"driver_start_work", "text":"Начать работу"},
+        {"data":"driver_active_order", "text":"Текущий заказ"}
+      ]
+    },
+    "driver_moder_menu" : {
+      "type" : "inline",
+      "layout" : [2,1,1],
+      "buttons" : [
+        {"data":"driver_end_work", "text":"Закончить работу"},
+        {"data":"driver_start_work", "text":"Начать работу"},
+        {"data":"driver_active_order", "text":"Текущий заказ"},
         {"data":"moder_menu", "text":"Меню Модератора"}
       ]
     },
     "driver_admin_menu" : {
       "type" : "inline",
-      "layout" : [2,1],
+      "layout" : [2,1,1],
       "buttons" : [
         {"data":"driver_end_work", "text":"Закончить работу"},
         {"data":"driver_start_work", "text":"Начать работу"},
+        {"data":"driver_active_order", "text":"Текущий заказ"},
         {"data":"admin_menu", "text":"Админское меню"}
       ]
     },
