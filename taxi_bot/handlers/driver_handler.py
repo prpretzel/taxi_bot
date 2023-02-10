@@ -234,7 +234,7 @@ class DriverActiveOrder(DriverBaseHandler):
             await self.delete_old_messages(chat_id=chat_id, order_id=order_id)
             await self.show_order(active_order, chat_id, kb_name)
         else:
-            await self.show_order(active_order, chat_id, 'У вас нет активных заказов')
+            await self.send_message(chat_id, order_id, 'У вас нет активных заказов')
         await self.answer_callback_query(callback_query)
         
 
