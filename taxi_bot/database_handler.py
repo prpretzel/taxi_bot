@@ -150,7 +150,6 @@ class DataBase(Config):
         self._session.commit()
 
     def delete_old_logs(self, expire_hours=120):
-        pass
         # from datetime import timedelta
         # expire_time = datetime.now() - timedelta(hours=expire_hours)
         # (
@@ -159,6 +158,7 @@ class DataBase(Config):
         #     .filter(Log_Message.date_time < expire_time)
         # ).delete()
         # self._session.commit()
+        pass
 
     def get_group(self, group=None):
         users = self._session.query(User).filter(User.active==1)
@@ -178,20 +178,21 @@ class DataBase(Config):
 
     def create_user(self, message: types.Message, referral):
         user_id = message.from_user.id
-        user = self._session.query(User).filter(User.user_id==user_id).first()
+        user: User = self._session.query(User).filter(User.user_id==user_id).first()
         if not user:
             username = message.from_user.username
             first_name = message.from_user.first_name
             last_name = message.from_user.last_name
             new_passenger = User(user_id, username, first_name, last_name, referral)
             self._session.add(new_passenger)
+            self._session.commit()
+            phone_number = False
         else:
             user.active = 1
+            phone_number = bool(user.phone_number)
         self._session.commit()
-        return self.check_user_phone_number(user_id)
-
-    def check_user_phone_number(self, user_id):
-        return bool(self.get_user_by_id(user_id).phone_number)
+        return phone_number
+        
 
     def update_phone_number(self, user_id, phone_number):
         user = self.get_user_by_id(user_id)
