@@ -57,7 +57,7 @@ class BaseHandler:
     async def show_order(self, order, chat_id, kb_name=None, delete_old=False):
         import re
         order_id = order.order_id
-        destination = order.location_to
+        destination = f"Куда: {order.location_to}"
         price = f"{order.price} рублей"
         geo = re.match(r'\d{1,3}\.\d+|\d{1,3}\.\d+', order.location_from)
         if geo:
