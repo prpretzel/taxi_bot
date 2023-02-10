@@ -230,9 +230,13 @@ class DriverActiveOrder(DriverBaseHandler):
         if active_order:
             order_id = active_order.order_id
             order_status = active_order.order_status
+            passenger_id = active_order.passenger_id
+            passenger_phone_number = self._db.get_user_by_id(passenger_id).phone_number
             kb_name = {200:'driver_cancel_wait', 250:'driver_cancel_pick', 300:'driver_complete'}[order_status]
             await self.delete_old_messages(chat_id=chat_id, order_id=order_id)
-            await self.show_order(active_order, chat_id, kb_name)
+            await self.show_order(active_order, chat_id)
+            text = f"Ваш заказ #{order_id}\nТелефон для связи с пассажиром {passenger_phone_number}\nЧат с пассажиром: {self.tg_user_link(passenger_id, 'Открыть чат')}"
+            await self.send_message(chat_id, order_id, text, kb_name)
         else:
             await self.send_message(chat_id, order_id, 'У вас нет активных заказов')
         await self.answer_callback_query(callback_query)
