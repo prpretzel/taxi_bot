@@ -34,6 +34,14 @@
         {"data":"admin_menu", "text":"Админское меню"}
       ]
     },
+    "order_details" : {
+      "type" : "inline",
+      "layout" : [2],
+      "buttons" : [
+        {"data":"order_details", "text":"Детали заказа"},
+        {"data":"hide_message", "text":"Скрыть сообщение"}
+      ]
+    },
     "driver_topup_menu" : {
       "type" : "inline",
       "layout" : [1,1],
@@ -69,14 +77,14 @@
       "type" : "reply",
       "layout" : [1],
       "buttons" : [
-        {"data":"", "text":"📞Оставить свой контакт", "options" : ["request_contact"]}
+        {"data":"", "text":"📞 Оставить свой контакт", "options" : ["request_contact"]}
       ]
     },
     "passenger_call_taxi" : {
       "type" : "inline",
       "layout" : [1],
       "buttons" : [
-        {"data":"call_taxi", "text":"🚕Заказать такси"}
+        {"data":"call_taxi", "text":"🚕 Заказать такси"}
       ]
     },
     "passenger_send_location" : {
@@ -84,7 +92,7 @@
       "layout" : [1],
       "placeholder" : "Куда подать машину?",
       "buttons" : [
-        {"data":"", "text":"🧭Отправить геопозицию", "options" : ["request_location"]}
+        {"data":"", "text":"🧭 Отправить геопозицию", "options" : ["request_location"]}
       ]
     },
     "driver_accept_refuse" : {
