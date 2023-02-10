@@ -27,6 +27,7 @@ from taxi_bot.handlers.driver_handler import (
     DriverAccepted,
     DriverRefused,
     DriverStartWork,
+    DriverActiveOrder,
     DriverStopWork,
     DriverTopUpMenu,
     DriverTopUp
@@ -109,6 +110,7 @@ def register_handlers(
     dp.register_callback_query_handler(DriverAccepted(*INSTANCES), L('driver_accepted'))
     dp.register_callback_query_handler(DriverRefused(*INSTANCES), L('driver_refused'))
     dp.register_callback_query_handler(DriverStartWork(*INSTANCES), L('driver_start_work'))
+    dp.register_callback_query_handler(DriverActiveOrder(*INSTANCES), L('driver_active_order'))
     dp.register_callback_query_handler(DriverStopWork(*INSTANCES), L('driver_end_work'))
     dp.register_callback_query_handler(DriverTopUpMenu(*INSTANCES), L('driver_topup_select'))
     dp.register_callback_query_handler(DriverTopUp(*INSTANCES), L('driver_topup'))

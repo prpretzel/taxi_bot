@@ -148,7 +148,7 @@ class DriverHide(OrderBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.delete_old_messages(message_id=message_id)
+        await self.delete_old_messages(message_id=message_id, force=True)
         await self.answer_callback_query(callback_query)
 
 
