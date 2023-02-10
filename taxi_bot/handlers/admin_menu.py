@@ -111,27 +111,7 @@ class OrderDetails(AdminBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
         order = self._db.get_order_by_id(order_id)
-        passenger = self._db.get_user_by_id(order.passenger_id)
-        driver = self._db.get_user_by_id(order.driver_id)
-        driver_contact = f"{self.tg_user_link(order.driver_id, 'Водитель')} {driver.phone_number}" if driver else 'Водитель не назначен'
-        order_date = order.order_dt.date()
-        order_dt = order.order_dt.strftime('%H:%M:%S') if order.order_dt else None
-        accept_dt = order.accept_dt.strftime('%H:%M:%S') if order.accept_dt else None
-        end_dt = order.end_dt.strftime('%H:%M:%S') if order.end_dt else None
-        text = [
-            f"#{order_id}",
-            f"Дата заказа: {order_date}",
-            f"Заказ создан: {order_dt}",
-            f"Заказ принят: {accept_dt}",
-            f"Заказ завершен: {end_dt}",
-            f"{self.tg_user_link(order.passenger_id, 'Пассажир')} {passenger.phone_number}",
-            driver_contact,
-            f"Откуда: {order.location_from}",
-            f"Куда: {order.location_to}",
-            f"Цена: {order.price}",
-            f"Статус: ({order.order_status}) {self.map_status(order.order_status)}",
-        ]
-        await self.send_message(chat_id, order_id, '\n'.join(text), 'hide_message')
+        await self.show_admin_order(order, callback_query=callback_query)
         await self.answer_callback_query(callback_query)
 
 
