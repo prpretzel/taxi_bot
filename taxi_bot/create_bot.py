@@ -5,13 +5,13 @@ from taxi_bot.database_handler import DataBase
 from taxi_bot.handlers.handler_registerer import register_handlers as RH
 from taxi_bot.buttons import get_kbs
 from taxi_bot.logger import Logger
-import taxi_bot
+from taxi_bot.load_config import Config
 
 
 class CreateBot:
 
     def __init__(self, creds_path):
-        self.config = taxi_bot.load_config.Config(creds_path)
+        self.config = Config(creds_path)
         self.bot = Bot(token=self.config.API_TOKEN)
         self.dp = Dispatcher(self.bot, storage=MemoryStorage())
         self.dp.middleware.setup(LoggingMiddleware())
@@ -29,6 +29,7 @@ class CreateBot:
         bot_commands = [
             types.BotCommand(command='/start', description='Стартовая страница'),
             types.BotCommand(command='/help', description='Инструкция'),
+            types.BotCommand(command='/referral', description='Реферальная программа'),
             types.BotCommand(command='/job', description='Работа в такси')
         ]
         await self.bot.set_my_commands(bot_commands)
