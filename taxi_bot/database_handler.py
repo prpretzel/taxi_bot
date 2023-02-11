@@ -185,7 +185,6 @@ class DataBase(Config):
             last_name = message.from_user.last_name
             new_passenger = User(user_id, username, first_name, last_name, referral)
             self._session.add(new_passenger)
-            self._session.commit()
             phone_number = False
         else:
             user.active = 1
@@ -193,7 +192,6 @@ class DataBase(Config):
         self._session.commit()
         return phone_number
         
-
     def update_phone_number(self, user_id, phone_number):
         user = self.get_user_by_id(user_id)
         user.phone_number = phone_number
@@ -275,31 +273,23 @@ class DataBase(Config):
         self._session.commit()
         return order
 
-    def update_cancel_dt(self, order_id) -> Order:
-        order = self.get_order_by_id(order_id)
-        order.end_dt = datetime.now()
-        self._session.commit()
-        return order
-
-    def update_order(self, order_id, new_status) -> Order:
+    def update_order_status(self, order_id, new_status) -> Order:
         order = self.get_order_by_id(order_id)
         order.order_status = new_status
         self._session.commit()
         return order
 
     def get_order_by_id(self, order_id) -> Order:
-        order = self._session.query(Order).filter(Order.order_id==order_id).first()
-        return order
+        return self._session.query(Order).filter(Order.order_id==order_id).first()
 
-    def get_orders(self, status) -> List[Order]:
-        order = self._session.query(Order).filter(Order.order_status==status).all()
-        return order
-
+    def get_orders_by_status(self, status) -> List[Order]:
+        return self._session.query(Order).filter(Order.order_status==status).all()
+         
     def get_user_active_order(self, user_id) -> Order:
         statuses = [100,200,250,300]
         return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status.in_(statuses)).first()
 
-    def get_order_messages(self, order_id, chat_id, message_id) -> List[Log_Message]:
+    def get_log_messages(self, order_id, chat_id, message_id) -> List[Log_Message]:
         messages = self._session.query(Log_Message).filter(Log_Message.shown==1)
         if order_id:
             messages = messages.filter(Log_Message.order_id==order_id)
@@ -336,22 +326,20 @@ class DataBase(Config):
         drivers = self.get_group('Driver').filter(User.active==1).filter(User.driver_status.in_([100,150])).all()
         return len(drivers)
 
-    def get_active_shift_by_driver_id(self, driver_id) -> Shift:
+    def get_driver_shift(self, driver_id) -> Shift:
         driver = self.get_user_by_id(driver_id)
-        shift_id = driver.driver_shift_id
-        shift = self._session.query(Shift).filter(Shift.shift_id==shift_id).first()
-        return shift
+        return self._session.query(Shift).filter(Shift.shift_id==driver.driver_shift_id).first()
 
     def driver_start_shift(self, driver_id) -> None:
         new_shift = Shift(driver_id)
-        driver = self.get_user_by_id(driver_id)
         self._session.add(new_shift)
         self._session.commit()
+        driver = self.get_user_by_id(driver_id)
         driver.driver_shift_id = new_shift.shift_id
         self._session.commit()
 
     def driver_complete_trip(self, driver_id, income) -> None:
-        shift = self.get_active_shift_by_driver_id(driver_id)
+        shift = self.get_driver_shift(driver_id)
         driver = self.get_user_by_id(driver_id)
         driver.driver_status = 100
         shift.total_income += income
@@ -359,7 +347,7 @@ class DataBase(Config):
         self._session.commit()
 
     def driver_end_shift(self, driver_id) -> Shift:
-        shift = self.get_active_shift_by_driver_id(driver_id)
+        shift = self.get_driver_shift(driver_id)
         shift.shift_end = datetime.now()
         self._session.commit()
         return shift
