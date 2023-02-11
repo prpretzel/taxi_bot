@@ -56,12 +56,16 @@ class DriverBaseHandler(BaseHandler):
             ])
         return text
     
-    def get_driver_menu(self, chat_id):
-        if chat_id==self._config.ADMIN_ID:
-            return 'driver_admin_menu'
-        elif chat_id in self._config.MODER_IDs: 
-            return 'driver_moder_menu'
-        return 'driver_menu'
+    def get_driver_menu(self, chat_id, driver_status=None):
+        if driver_status:
+            if chat_id==self._config.ADMIN_ID:
+                return 'driver_admin_menu'
+            elif chat_id in self._config.MODER_IDs: 
+                return 'driver_moder_menu'
+            if driver_status == 30:
+                return None
+            return 'driver_menu'
+        return 'job_menu'
         
 
 class JobHandler(DriverBaseHandler):
@@ -72,27 +76,25 @@ class JobHandler(DriverBaseHandler):
             return
         driver = self._db.get_user_by_id(chat_id)
         driver_status = driver.driver_status
-        if driver_status:
-            kb_name = self.get_driver_menu(chat_id)
-            if driver_status in [100,150]:
-                active_shift = self._db.get_active_shift_by_driver_id(chat_id)
-                report = self.create_shift_report(active_shift)
-                text = 'Вы сейчас на смене.\n' + report + self.link
-            elif driver_status==50:
-                text = "Вы сейчас не на смене. Нажмите 'Начать работу' чтобы получать заказы" + self.link
-            elif driver_status==30:
-                text = "Ваш аккаунт временно заблокирован. Напишите в поддержку @Boguchar_taxi_support"
+        kb_name = self.get_driver_menu(chat_id, driver_status)
+        if driver_status in [100,150]:
+            active_shift = self._db.get_driver_shift(chat_id)
+            report = self.create_shift_report(active_shift)
+            text = 'Вы сейчас на смене.\n' + report + self.link
+        elif driver_status==50:
+            text = "Вы сейчас не на смене. Нажмите 'Начать работу' чтобы получать заказы" + self.link
+        elif driver_status==30:
+            text = "Ваш аккаунт временно заблокирован. Напишите в поддержку @Boguchar_taxi_support"
         else:
             text = self._config.messages['job_message']
-            kb_name = 'job_menu'
-        await self.send_message(chat_id, order_id, text, kb_name)
+        await self.send_message(chat_id, order_id, text, kb_name, delete_old=True)
 
 
 class DriverJob(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.remove_reply_markup(callback_query, order_id)
+        await self.remove_inline_markup(callback_query, order_id)
         text = f'Для регистрации в качестве водителя Вам необходимо указать своё имя, а также цвет, марку и регистрационный номер автомобиля'
         await self.send_message(chat_id, order_id, text, 'driver_continue_registration')
         await self.answer_callback_query(callback_query)
@@ -102,7 +104,7 @@ class DriverContinueRegistration(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.remove_reply_markup(callback_query, order_id)
+        await self.remove_inline_markup(callback_query, order_id)
         await DriverJobApplience.name.set()
         text = 'Введите Ваше имя:'
         message = await self.send_message(chat_id, order_id, text, 'driver_cancel_registration')
@@ -115,7 +117,7 @@ class DriverName(DriverBaseHandler):
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
         previous_message = await self.get_state(state, 'previous_message')
-        await self.remove_reply_markup(previous_message, order_id)
+        await self.remove_inline_markup(previous_message, order_id)
         if len(optionals['text']) > 30:
             text = "Краткость - сестра таланта 😉"
             message = await self.send_message(chat_id, order_id, text, 'driver_cancel_registration')
@@ -133,7 +135,7 @@ class DriverCar(DriverBaseHandler):
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
         previous_message = await self.get_state(state, 'previous_message')
-        await self.remove_reply_markup(previous_message, order_id)
+        await self.remove_inline_markup(previous_message, order_id)
         if len(optionals['text']) > 30:
             text = "Краткость - сестра таланта 😉"
             message = await self.send_message(chat_id, order_id, text, 'driver_cancel_registration')
