@@ -180,7 +180,6 @@ class BaseHandler:
                     chat_id=chat_id, 
                     message_id=message_id, 
                     reply_markup=kb, 
-                    parse_mode='html'
                 )
                 self.log_info(chat_id, message.message_id, order_id, self, f'{kb_name}')
             except Exception as err:
