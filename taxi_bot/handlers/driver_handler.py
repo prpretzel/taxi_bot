@@ -261,8 +261,10 @@ class DriverStopWork(DriverBaseHandler):
         elif status==100:
             shift = self._db.driver_end_shift(chat_id)
             report = self.create_shift_report(shift)
-            self._db.update_driver_status(chat_id, 50)
-            await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report + self.link, self.get_driver_menu(chat_id), delete_old=True)
+            new_status = 50
+            self._db.update_driver_status(chat_id, new_status)
+            kb = self.get_driver_menu(chat_id, new_status)
+            await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report + self.link, kb, delete_old=True)
         elif status==50:
             await self.send_message(chat_id, None, 'Вы сейчас не работаете' + self.link, delete_old=True)
         await self.answer_callback_query(callback_query)
