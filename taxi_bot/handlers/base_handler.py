@@ -126,6 +126,52 @@ class BaseHandler:
             return message
         except Exception as err:
             self.log_error(chat_id, None, order_id, self, err)
+            
+    async def show_admin_order(self, order, callback_query=None):
+        from datetime import datetime
+        order_id = order.order_id
+        passenger = self._db.get_user_by_id(order.passenger_id)
+        driver = self._db.get_user_by_id(order.driver_id)
+        driver_contact = f"{self.tg_user_link(order.driver_id, 'Водитель')} {driver.phone_number}" if driver else 'Водитель не назначен'
+        order_date = order.order_dt.date()
+        order_dt = order.order_dt.strftime('%H:%M:%S') if order.order_dt else None
+        accept_dt = order.accept_dt.strftime('%H:%M:%S') if order.accept_dt else None
+        end_dt = order.end_dt.strftime('%H:%M:%S') if order.end_dt else None
+        now = datetime.now().strftime('%H:%M:%S')
+        text = [
+            f"#{order_id}",
+            f"Дата заказа: {order_date}",
+            f"Заказ создан: {order_dt}",
+            f"Заказ принят: {accept_dt}",
+            f"Заказ завершен: {end_dt}",
+            f"{self.tg_user_link(order.passenger_id, 'Пассажир')} {passenger.phone_number}",
+            driver_contact,
+            f"Откуда: {order.location_from}",
+            f"Куда: {order.location_to}",
+            f"Цена: {order.price}",
+            f"Статус: ({order.order_status}) {self.map_status(order.order_status)}",
+            f"Время обновления: {now}",
+        ]
+        text = '\n'.join(text)
+        if not callback_query:
+            await self.send_message(self._config.ADMIN_ID, order_id, text, 'order_details')
+        else:
+            chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+            await self.edit_message(order_id, chat_id, message_id, text, 'order_details')
+            await self.answer_callback_query(callback_query)
+            
+    async def edit_message(self, order_id, chat_id, message_id, text, kb_name=None):
+        kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
+        try:
+            await self._bot.edit_message_text(
+                chat_id=chat_id, 
+                message_id=message_id, 
+                text=text, 
+                reply_markup=kb, 
+                parse_mode='html'
+            )
+        except Exception as err:
+            self.log_error(chat_id, None, order_id, self, err)
 
     async def edit_reply_markup(self, callback_query: types.CallbackQuery, kb_name, order_id):
         chat_id = callback_query.from_user.id

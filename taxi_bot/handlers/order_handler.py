@@ -109,7 +109,7 @@ class NewOrderPrice(OrderBaseHandler):
             await self.show_order(order=order, chat_id=passenger_id, delete_old=True)
             for chat_id in self._db.get_drivers_id(100):
                 await self.show_order(order=order, chat_id=chat_id, kb_name='driver_accept_refuse')
-            await self.show_order(order=order, chat_id=self._config.ADMIN_ID, kb_name='order_details')
+            await self.show_admin_order(order)
             text = f"Идет поиск машины...\nВодителей на линии: {self._db.get_available_drivers_count()}"
             message = await self.send_message(passenger_id, order_id, text, 'passenger_cancel')
         else:
