@@ -173,8 +173,8 @@ class DriverWait(OrderBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
         order = self._db.update_wait_dt(order_id)
+        await self.send_message(order.passenger_id, order_id, text=f"Водитель ожидает\nВремя бесплатного ожидания 10 минут")
         await self.edit_message(driver_id, message_id, order_id, kb_name='driver_cancel_pick')
-        await self.send_message(order.passenger_id, order_id, text=f"Водитель ожидает")
         await self.answer_callback_query(callback_query)
 
 
