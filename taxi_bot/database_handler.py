@@ -273,6 +273,12 @@ class DataBase(Config):
         self._session.commit()
         return order
 
+    def update_cancel_dt(self, order_id) -> Order:
+        order = self.get_order_by_id(order_id)
+        order.end_dt = datetime.now()
+        self._session.commit()
+        return order
+
     def update_order_status(self, order_id, new_status) -> Order:
         order = self.get_order_by_id(order_id)
         order.order_status = new_status
