@@ -211,7 +211,7 @@ class DriverComplete(OrderBaseHandler):
         passenger_text = [
             end_trip_text,
             f"Расскажите о нас своим друзьям и получите возможность выиграть денежный приз!\nПодробности тут ➡️ /referral",
-            f"Оставьте подробный отзыв о нашем такси в {self._config.BOT_SUPPORT} и получите 20 рублей на свой телефон!"
+            f"Вы можете оставить отзыв о нашем такси в {self._config.BOT_SUPPORT}"
         ]
         passenger_text = "\n\n".join(passenger_text)
         await self.send_message(chat_id=passenger_id, order_id=order_id, text=passenger_text, kb_name='passenger_call_taxi', delete_old=True)
