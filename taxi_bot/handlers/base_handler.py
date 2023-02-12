@@ -134,20 +134,20 @@ class BaseHandler:
         driver = self._db.get_user_by_id(order.driver_id)
         driver_contact = f"{self.tg_user_link(order.driver_id, driver.first_name)} {driver.phone_number}" if driver else 'Водитель не назначен'
         order_date = order.order_dt.date()
-        order_dt = order.order_dt.strftime('%H:%M:%S') if order.order_dt else None
-        accept_dt = order.accept_dt.strftime('%H:%M:%S') if order.accept_dt else None
-        wait_dt = order.wait_dt.strftime('%H:%M:%S') if order.wait_dt else None
-        pick_dt = order.pick_dt.strftime('%H:%M:%S') if order.pick_dt else None
-        end_dt = order.end_dt.strftime('%H:%M:%S') if order.end_dt else None
+        order_dt = order.order_dt if order.order_dt else None
+        accept_dt = order.accept_dt if order.accept_dt else None
+        wait_dt = order.wait_dt if order.wait_dt else None
+        pick_dt = order.pick_dt if order.pick_dt else None
+        end_dt = order.end_dt if order.end_dt else None
         now = datetime.now().strftime('%H:%M:%S')
         text = [
             f"#{order_id}",
             f"Дата заказа: {order_date}",
-            f"Create: {order_dt}",
-            f"Accept: {accept_dt} ({self.time_handler(accept_dt, order_dt)})",
-            f"Wait:   {wait_dt} ({self.time_handler(wait_dt, accept_dt)})",
-            f"Pick:   {pick_dt} ({self.time_handler(pick_dt, wait_dt)})",
-            f"End:    {end_dt} ({self.time_handler(end_dt, pick_dt)})",
+            f"Create: {order_dt.strftime('%H:%M:%S')}",
+            f"Accept: {accept_dt.strftime('%H:%M:%S')} ({self.time_handler(accept_dt, order_dt)})",
+            f"Wait:   {wait_dt.strftime('%H:%M:%S')} ({self.time_handler(wait_dt, accept_dt)})",
+            f"Pick:   {pick_dt.strftime('%H:%M:%S')} ({self.time_handler(pick_dt, wait_dt)})",
+            f"End:    {end_dt.strftime('%H:%M:%S')} ({self.time_handler(end_dt, pick_dt)})",
             f"{self.tg_user_link(order.passenger_id, 'Пассажир')} {passenger.phone_number}",
             driver_contact,
             f"Откуда: {order.location_from}",
