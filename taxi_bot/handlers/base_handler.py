@@ -103,6 +103,8 @@ class BaseHandler:
     def time_handler(self, dt1, dt2):
         if dt1 == dt2:
             return
+        if not dt1 or not dt2:
+            return ''
         dt = (dt1 - dt2).seconds
         hours = str(dt//3600).zfill(2)
         minutes = str(dt%3600//60).zfill(2)
@@ -129,32 +131,40 @@ class BaseHandler:
             
     async def show_admin_order(self, order, callback_query=None):
         from datetime import datetime
+        def time_handler_2(dt):
+            return (dt, dt.strftime('%H:%M:%S')) if dt else (None, '')
+            
         order_id = order.order_id
         passenger = self._db.get_user_by_id(order.passenger_id)
         driver = self._db.get_user_by_id(order.driver_id)
         driver_contact = f"{self.tg_user_link(order.driver_id, driver.first_name)} {driver.phone_number}" if driver else 'Водитель не назначен'
         order_date = order.order_dt.date()
-        order_dt = order.order_dt if order.order_dt else None
-        accept_dt = order.accept_dt if order.accept_dt else None
-        wait_dt = order.wait_dt if order.wait_dt else None
-        pick_dt = order.pick_dt if order.pick_dt else None
-        end_dt = order.end_dt if order.end_dt else None
-        now = datetime.now().strftime('%H:%M:%S')
+        # order_dt = order.order_dt if order.order_dt else None
+        # accept_dt = order.accept_dt if order.accept_dt else None
+        # wait_dt = order.wait_dt if order.wait_dt else None
+        # pick_dt = order.pick_dt if order.pick_dt else None
+        # end_dt = order.end_dt if order.end_dt else None
+        order_dt, order_dt_str = time_handler_2(order.order_dt)
+        accept_dt, accept_dt_str = time_handler_2(order.accept_dt)
+        wait_dt, wait_dt_str = time_handler_2(order.wait_dt)
+        pick_dt, pick_dt_str = time_handler_2(order.pick_dt)
+        end_dt, end_dt_str = time_handler_2(order.end_dt)
+        now, now_str = time_handler_2(datetime.now())
         text = [
             f"#{order_id}",
             f"Дата заказа: {order_date}",
-            f"Create:  {order_dt.strftime('%H:%M:%S')}",
-            f"Accept: {accept_dt.strftime('%H:%M:%S')} ({self.time_handler(accept_dt, order_dt)})",
-            f"Wait:     {wait_dt.strftime('%H:%M:%S')} ({self.time_handler(wait_dt, accept_dt)})",
-            f"Pick:     {pick_dt.strftime('%H:%M:%S')} ({self.time_handler(pick_dt, wait_dt)})",
-            f"End:      {end_dt.strftime('%H:%M:%S')} ({self.time_handler(end_dt, pick_dt)})",
+            f"Create:  {order_dt_str}",
+            f"Accept: {accept_dt_str} ({self.time_handler(accept_dt, order_dt)})",
+            f"Wait:     {wait_dt_str} ({self.time_handler(wait_dt, accept_dt)})",
+            f"Pick:     {pick_dt_str} ({self.time_handler(pick_dt, wait_dt)})",
+            f"End:      {end_dt_str} ({self.time_handler(end_dt, pick_dt)})",
             f"{self.tg_user_link(order.passenger_id, 'Пассажир')} {passenger.phone_number}",
             driver_contact,
             f"Откуда: {order.location_from}",
             f"Куда: {order.location_to}",
             f"Цена: {order.price}",
             f"Статус: ({order.order_status}) {self.map_status(order.order_status)}",
-            f"Время обновления: {now}",
+            f"Время обновления: {now_str}",
         ]
         text = '\n'.join(text)
         if not callback_query:

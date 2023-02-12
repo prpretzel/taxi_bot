@@ -69,7 +69,7 @@ class DriversStatus(AdminBaseHandler):
             '----------------'
         ] + text
         text = '\n'.join(text)
-        await self.edit_message(chat_id, message_id, order_id, text, 'admin_menu')
+        await self.edit_message(chat_id, message_id, order_id, text, 'moder_menu')
         await self.answer_callback_query(callback_query)
 
 
