@@ -18,7 +18,7 @@ class HelpHandler(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
-        text = self._config.messages['help_message'].format(chat_id)
+        text = self._config.messages['help_message'].format(self._config.BOT_SUPPORT, chat_id)
         await self.send_message(chat_id, order_id, text, 'passenger_call_taxi', delete_old=True)
         
 

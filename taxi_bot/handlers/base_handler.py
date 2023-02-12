@@ -311,4 +311,4 @@ class BaseHandler:
         return status_mapper[order_status]
     
     def get_referral_link(self, chat_id):
-        return f"https://t.me/Taxi_boguchar_bot?start={chat_id}"
+        return f"{self._config.BOT_LINK}?start={chat_id}"
