@@ -272,7 +272,7 @@ class BaseHandler:
     def log_info(self, chat_id, message_id, order_id, _self, message):
         self._db.log_message('INFO', chat_id, message_id, order_id, _self, message, 0)
     
-    def log_message(self, chat_id, message_id, order_id, _self, message, shown):
+    def log_message(self, chat_id, message_id, order_id, _self, message, shown=1):
         self._db.log_message('MESSAGE', chat_id, message_id, order_id, _self, message, shown)
     
     def log_error(self, chat_id, message_id, order_id, _self, message):
