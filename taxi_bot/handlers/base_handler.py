@@ -91,7 +91,7 @@ class BaseHandler:
         log_ids = list()
         for order in orders:
             chat_id, message_id, order_id = order.chat_id, order.message_id, order.order_id
-            if (order_id and chat_id == self._config.ADMIN_ID) and (not force):
+            if (order.shown==2) and (not force):
                 continue
             try:
                 await self._bot.delete_message(chat_id, message_id)
@@ -109,7 +109,7 @@ class BaseHandler:
         seconds = str(dt%60).zfill(2)
         return f"{hours}:{minutes}:{seconds}"
     
-    async def send_message(self, chat_id, order_id, text, kb_name=None, delete_old=False):
+    async def send_message(self, chat_id, order_id, text, kb_name=None, delete_old=False, shown=1):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
         try:
             message = await self._bot.send_message(
@@ -122,7 +122,7 @@ class BaseHandler:
                 await self.delete_old_messages(chat_id=chat_id)
                 if order_id:
                     await self.delete_old_messages(order_id=order_id)
-            self.log_message(chat_id, message.message_id, order_id, self, text)
+            self.log_message(chat_id, message.message_id, order_id, self, text, shown=shown)
             return message
         except Exception as err:
             self.log_error(chat_id, None, order_id, self, err)
@@ -132,10 +132,12 @@ class BaseHandler:
         order_id = order.order_id
         passenger = self._db.get_user_by_id(order.passenger_id)
         driver = self._db.get_user_by_id(order.driver_id)
-        driver_contact = f"{self.tg_user_link(order.driver_id, 'Водитель')} {driver.phone_number}" if driver else 'Водитель не назначен'
+        driver_contact = f"{self.tg_user_link(order.driver_id, driver.first_name)} {driver.phone_number}" if driver else 'Водитель не назначен'
         order_date = order.order_dt.date()
         order_dt = order.order_dt.strftime('%H:%M:%S') if order.order_dt else None
         accept_dt = order.accept_dt.strftime('%H:%M:%S') if order.accept_dt else None
+        wait_dt = order.wait_dt.strftime('%H:%M:%S') if order.order_dt else None
+        pick_dt = order.pick_dt.strftime('%H:%M:%S') if order.accept_dt else None
         end_dt = order.end_dt.strftime('%H:%M:%S') if order.end_dt else None
         now = datetime.now().strftime('%H:%M:%S')
         text = [
@@ -143,6 +145,8 @@ class BaseHandler:
             f"Дата заказа: {order_date}",
             f"Заказ создан: {order_dt}",
             f"Заказ принят: {accept_dt}",
+            f"Водитель приехал: {wait_dt}",
+            f"Начало поездки: {pick_dt}",
             f"Заказ завершен: {end_dt}",
             f"{self.tg_user_link(order.passenger_id, 'Пассажир')} {passenger.phone_number}",
             driver_contact,
@@ -154,7 +158,7 @@ class BaseHandler:
         ]
         text = '\n'.join(text)
         if not callback_query:
-            await self.send_message(self._config.ADMIN_ID, order_id, text, 'order_details')
+            await self.send_message(self._config.ADMIN_ID, order_id, text, 'order_details', shown=2)
         else:
             chat_id, message_id, order_id, optionals = self.message_data(callback_query)
             await self.edit_message(chat_id, message_id, order_id, text, 'order_details')
@@ -268,8 +272,8 @@ class BaseHandler:
     def log_info(self, chat_id, message_id, order_id, _self, message):
         self._db.log_message('INFO', chat_id, message_id, order_id, _self, message, 0)
     
-    def log_message(self, chat_id, message_id, order_id, _self, message):
-        self._db.log_message('MESSAGE', chat_id, message_id, order_id, _self, message, 1)
+    def log_message(self, chat_id, message_id, order_id, _self, message, shown):
+        self._db.log_message('MESSAGE', chat_id, message_id, order_id, _self, message, shown)
     
     def log_error(self, chat_id, message_id, order_id, _self, message):
         self._db.log_message('ERROR', chat_id, message_id, order_id, _self, message, 0)
