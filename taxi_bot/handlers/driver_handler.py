@@ -264,7 +264,7 @@ class DriverStopWork(DriverBaseHandler):
             new_status = 50
             self._db.update_driver_status(chat_id, new_status)
             kb = self.get_driver_menu(chat_id, new_status)
-            await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report + self.link, kb, delete_old=True)
+            await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report + self.link, delete_old=True)
         elif status==50:
             await self.send_message(chat_id, None, 'Вы сейчас не работаете' + self.link, delete_old=True)
         await self.answer_callback_query(callback_query)
