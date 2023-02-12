@@ -173,8 +173,8 @@ class DriverWait(OrderBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
         order = self._db.update_wait_dt(order_id)
+        await self.send_message(order.passenger_id, order_id, text=f"Водитель ожидает\nВремя бесплатного ожидания 10 минут")
         await self.edit_message(driver_id, message_id, order_id, kb_name='driver_cancel_pick')
-        await self.send_message(order.passenger_id, order_id, text=f"Водитель ожидает")
         await self.answer_callback_query(callback_query)
 
 
@@ -195,24 +195,27 @@ class DriverComplete(OrderBaseHandler):
         order = self._db.get_order_by_id(order_id)
         passenger_id = order.passenger_id
         self._db.update_end_dt(order_id)
+        self._db.driver_complete_trip(driver_id, order.price)
         dt1 = order.order_dt
         dt2 = order.wait_dt
         dt3 = order.pick_dt
         dt4 = order.end_dt
-        add_text = [
-            "",
+        end_trip_text = [
+            f"Поездка завершена",
             f"Время ожидания такси: {self.time_handler(dt2, dt1)}",
             f"Время ожидания пассажира: {self.time_handler(dt3, dt2)}",
             f"Поездка заняла: {self.time_handler(dt4, dt3)}",
             f"Стоимость поездки: {order.price} рублей",
         ]
-        add_text = "\n".join(add_text)
-        self._db.driver_complete_trip(driver_id, order.price)
-        self._db.update_end_dt(order_id)
-        await self.send_message(chat_id=passenger_id, order_id=order_id, text=f"Поездка завершена {add_text}", kb_name='passenger_call_taxi', delete_old=True)
-        referral_text = f"Расскажите о нас своим друзьям и участвуй в конкурсе с денежными призами\nПодробности тут ➡️ /referral"
-        await self.send_message(chat_id=passenger_id, order_id=order_id, text=referral_text)
-        await self.send_message(chat_id=driver_id, order_id=order_id, text=f"Поездка завершена (водитель){add_text}")
+        end_trip_text = "\n".join(end_trip_text)
+        passenger_text = [
+            end_trip_text,
+            f"Расскажите о нас своим друзьям и получите возможность выиграть денежный приз!\nПодробности тут ➡️ /referral",
+            f"Вы можете оставить отзыв о нашем такси в {self._config.BOT_SUPPORT}"
+        ]
+        passenger_text = "\n\n".join(passenger_text)
+        await self.send_message(chat_id=passenger_id, order_id=order_id, text=passenger_text, kb_name='passenger_call_taxi', delete_old=True)
+        await self.send_message(chat_id=driver_id, order_id=order_id, text=end_trip_text)
         await self.show_active_orders(driver_id)
         await self.answer_callback_query(callback_query)
 

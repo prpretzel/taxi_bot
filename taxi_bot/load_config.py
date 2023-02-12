@@ -23,6 +23,8 @@ class Config:
         self.PAYMENT_TOKEN = self._creds.get('PAYMENT_TOKEN')
         self.ADMIN_ID = self._creds.get('ADMIN_ID')
         self.MODER_IDs = self._creds.get('MODER_IDs')
+        self.BOT_LINK = self._creds.get('BOT_LINK')
+        self.BOT_SUPPORT = self._creds.get('BOT_SUPPORT')
         self.messages = {name.value: text.value for name, text in open_xls('messages.xls').sheet_by_index(0)}
         self.buttons = self._config.get('buttons')
 

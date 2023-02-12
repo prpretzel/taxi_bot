@@ -296,7 +296,7 @@ class DataBase(Config):
         return self._session.query(Order).filter(Order.passenger_id==user_id).filter(Order.order_status.in_(statuses)).first()
 
     def get_log_messages(self, order_id, chat_id, message_id) -> List[Log_Message]:
-        messages = self._session.query(Log_Message).filter(Log_Message.shown==1)
+        messages = self._session.query(Log_Message).filter(Log_Message.shown!=0)
         if order_id:
             messages = messages.filter(Log_Message.order_id==order_id)
         if chat_id:
