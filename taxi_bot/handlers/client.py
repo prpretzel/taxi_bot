@@ -35,7 +35,7 @@ class ReferralProgram(BaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
         chat_id, message_id, order_id, optionals = self.message_data(message)
-        link = f"https://t.me/Taxi_boguchar_bot?start={chat_id}"
+        link = self.get_referral_link(chat_id)
         await self.send_message(chat_id, order_id, self._config.messages['rp_text'], delete_old=True)
         await self.send_message(chat_id, order_id, link)
         

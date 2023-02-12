@@ -32,7 +32,7 @@ class AdminMenu(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.send_message(chat_id, order_id, 'Админское меню', 'admin_menu')
+        await self.edit_message(chat_id, message_id, order_id, 'Админское меню', 'admin_menu')
         await self.answer_callback_query(callback_query)
 
 
@@ -40,7 +40,7 @@ class ModerMenu(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.send_message(chat_id, order_id, 'Меню модератора', 'moder_menu')
+        await self.edit_message(chat_id, message_id, order_id, 'Меню модератора', 'moder_menu')
         await self.answer_callback_query(callback_query)
 
 
@@ -69,7 +69,7 @@ class DriversStatus(AdminBaseHandler):
             '----------------'
         ] + text
         text = '\n'.join(text)
-        await self.send_message(chat_id, order_id, text, 'hide_message')
+        await self.edit_message(chat_id, message_id, order_id, text, 'admin_menu')
         await self.answer_callback_query(callback_query)
 
 
@@ -77,7 +77,7 @@ class InviteBroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-        await self.send_message(callback_query.from_user.id, order_id, 'Введите текст сообщения:', 'broadcast_cancel', delete_old=True)
+        await self.send_message(chat_id, order_id, 'Введите текст сообщения:', 'broadcast_cancel', delete_old=True)
         await InputMessage.invite_input.set()
         await self.answer_callback_query(callback_query)
 
@@ -119,8 +119,7 @@ class CancelBroadcast(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-        kb_name = 'admin_menu' if chat_id==self._config.ADMIN_ID else 'moder_menu'
-        await self.send_message(chat_id, order_id, 'Админское меню', kb_name, delete_old=True)
+        await self.send_message(chat_id, order_id, 'Админское меню', 'admin_menu', delete_old=True)
         await self.answer_callback_query(callback_query)
         if await state.get_state():
             await state.finish()

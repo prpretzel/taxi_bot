@@ -82,12 +82,12 @@ class BaseHandler:
             await self.send_message(chat_id, order_id, text, kb_name, delete_old)
 
     async def show_active_orders(self, driver_id):
-        active_orders = self._db.get_orders(100)
+        active_orders = self._db.get_orders_by_status(100)
         for order in active_orders:
             await self.show_order(order, driver_id, 'driver_accept_refuse')
 
     async def delete_old_messages(self, order_id=None, chat_id=None, message_id=None, force=False):
-        orders = self._db.get_order_messages(order_id=order_id, chat_id=chat_id, message_id=message_id)
+        orders = self._db.get_log_messages(order_id=order_id, chat_id=chat_id, message_id=message_id)
         log_ids = list()
         for order in orders:
             chat_id, message_id, order_id = order.chat_id, order.message_id, order.order_id
@@ -157,21 +157,34 @@ class BaseHandler:
             await self.send_message(self._config.ADMIN_ID, order_id, text, 'order_details')
         else:
             chat_id, message_id, order_id, optionals = self.message_data(callback_query)
-            await self.edit_message(order_id, chat_id, message_id, text, 'order_details')
+            await self.edit_message(chat_id, message_id, order_id, text, 'order_details')
             await self.answer_callback_query(callback_query)
             
-    async def edit_message(self, order_id, chat_id, message_id, text, kb_name=None):
+    async def edit_message(self, chat_id, message_id, order_id, text=None, kb_name=None):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
-        try:
-            await self._bot.edit_message_text(
-                chat_id=chat_id, 
-                message_id=message_id, 
-                text=text, 
-                reply_markup=kb, 
-                parse_mode='html'
-            )
-        except Exception as err:
-            self.log_error(chat_id, None, order_id, self, err)
+        if text:
+            try:
+                message = await self._bot.edit_message_text(
+                    chat_id=chat_id, 
+                    message_id=message_id, 
+                    text=text, 
+                    reply_markup=kb, 
+                    parse_mode='html'
+                )
+                self.log_info(chat_id, message.message_id, order_id, self, f'{text}|{kb_name}')
+            except Exception as err:
+                self.log_error(chat_id, None, order_id, self, err)
+        else:
+            try:
+                message = await self._bot.edit_message_reply_markup(
+                    chat_id=chat_id, 
+                    message_id=message_id, 
+                    reply_markup=kb, 
+                    parse_mode='html'
+                )
+                self.log_info(chat_id, message.message_id, order_id, self, f'{kb_name}')
+            except Exception as err:
+                self.log_error(chat_id, None, order_id, self, err)
 
     async def edit_reply_markup(self, callback_query: types.CallbackQuery, kb_name, order_id):
         chat_id = callback_query.from_user.id
@@ -202,7 +215,7 @@ class BaseHandler:
         except Exception as err:
             self.log_error(chat_id, None, order_id, self, err)
 
-    async def remove_reply_markup(self, query, order_id):
+    async def remove_inline_markup(self, query, order_id):
         chat_id, message_id, order_id, optionals = self.message_data(query)
         try:
             if isinstance(query, types.Message):
@@ -297,3 +310,6 @@ class BaseHandler:
             150: 'Отмена водителем       ',
         }
         return status_mapper[order_status]
+    
+    def get_referral_link(self, chat_id):
+        return f"https://t.me/Taxi_boguchar_bot?start={chat_id}"
