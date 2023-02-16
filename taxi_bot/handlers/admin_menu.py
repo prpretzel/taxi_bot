@@ -49,7 +49,7 @@ class DriversStatus(AdminBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
         chat_id, message_id, order_id, optionals = self.message_data(callback_query)
         text = list()
-        statuses = {50:0, 100:0, 150:0}
+        statuses = {50:0, 100:0, 150:0, 30:0}
         status_mapper = {50:'🔴', 100:'🟢', 150:'🟡', 30:'❌'}
         drivers = self._db.get_drivers()
         drivers.sort(key=lambda v: v.driver_status, reverse=True)
