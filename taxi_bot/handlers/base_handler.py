@@ -322,7 +322,10 @@ class BaseHandler:
             50 : 'Отмена пассажиром      ',
             150: 'Отмена водителем       ',
         }
-        return status_mapper[order_status]
+        if order_status in status_mapper.keys():
+            return status_mapper[order_status]
+        else:
+            return order_status
     
     def get_referral_link(self, chat_id):
         return f"{self._config.BOT_LINK}?start={chat_id}"

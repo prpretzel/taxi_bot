@@ -4,10 +4,9 @@ from taxi_bot.database_handler import DataBase
 from aiogram import Bot
 from taxi_bot.load_config import Config
 from taxi_bot.logger import Logger
-from taxi_bot.buttons import keyboard_generator
-from aiogram.types import ReplyKeyboardRemove
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from datetime import datetime
 import re 
 
 class OrderForm(StatesGroup):
@@ -193,6 +192,9 @@ class DriverComplete(OrderBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
         order = self._db.get_order_by_id(order_id)
+        if (datetime.now() - order.pick_dt).seconds < 45:
+            await self.answer_callback_query(callback_query)
+            return
         passenger_id = order.passenger_id
         self._db.update_end_dt(order_id)
         self._db.driver_complete_trip(driver_id, order.price)
@@ -225,6 +227,10 @@ class DriverCancel(OrderBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
         driver_id, message_id, order_id, optionals = self.message_data(callback_query)
         order = self._db.update_cancel_dt(order_id)
+        last_action_dt = order.pick_dt if order.pick_dt else order.accept_dt
+        if (datetime.now() - last_action_dt).seconds < 45:
+            await self.answer_callback_query(callback_query)
+            return
         self._db.update_order_status(order_id, order.order_status+7)
         passenger_id = order.passenger_id
         self._db.update_driver_status(driver_id, 100)
