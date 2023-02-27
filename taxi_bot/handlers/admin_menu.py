@@ -31,23 +31,21 @@ class AdminBaseHandler(BaseHandler):
 class AdminMenu(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         await self.edit_message(chat_id, message_id, order_id, 'Админское меню', 'admin_menu')
-        await self.answer_callback_query(callback_query)
 
 
 class ModerMenu(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         await self.edit_message(chat_id, message_id, order_id, 'Меню модератора', 'moder_menu')
-        await self.answer_callback_query(callback_query)
 
 
 class DriversStatus(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         text = list()
         statuses = {50:0, 100:0, 150:0, 30:0}
         status_mapper = {50:'🔴', 100:'🟢', 150:'🟡', 30:'❌'}
@@ -70,22 +68,20 @@ class DriversStatus(AdminBaseHandler):
         ] + text
         text = '\n'.join(text)
         await self.edit_message(chat_id, message_id, order_id, text, 'moder_menu')
-        await self.answer_callback_query(callback_query)
 
 
 class InviteBroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         await self.send_message(chat_id, order_id, 'Введите текст сообщения:', 'broadcast_cancel', delete_old=True)
         await InputMessage.invite_input.set()
-        await self.answer_callback_query(callback_query)
 
 
 class CheckBroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, message: types.Message, state:FSMContext) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(message)
+        chat_id, message_id, order_id, optionals = await self.message_data(message)
         await self.discard_reply_markup(chat_id, order_id)
         text = optionals['text']
         await self.set_state(state, 'message', text)
@@ -96,31 +92,28 @@ class CheckBroadcastMessage(AdminBaseHandler):
 class BroadcastMessage(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         text = await self.get_state(state, 'message')
         target = callback_query.data.split('@')[-1]
         users_id = [user.user_id for user in self._db.get_group(target).all()]
         for user_id in users_id:
             await self.send_message(user_id, order_id, text, 'hide_message')
         await state.finish()
-        await self.answer_callback_query(callback_query)
 
 
 class OrderDetails(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         order = self._db.get_order_by_id(order_id)
         await self.show_admin_order(order, callback_query=callback_query)
-        await self.answer_callback_query(callback_query)
 
 
 class CancelBroadcast(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         await self.send_message(chat_id, order_id, 'Админское меню', 'admin_menu', delete_old=True)
-        await self.answer_callback_query(callback_query)
         if await state.get_state():
             await state.finish()
 
@@ -128,6 +121,50 @@ class CancelBroadcast(AdminBaseHandler):
 class DeleteOldLogs(AdminBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         self._db.delete_old_logs(expire_hours=1)
-        
+
+
+class UserInfo(AdminBaseHandler):
+
+    async def __call__(self, message: types.Message, state:FSMContext) -> None: 
+        chat_id, message_id, order_id, optionals = await self.message_data(message)
+        try:
+            user_id = int(optionals['text'].lower().replace('user', ''))
+            await self.show_admin_user(user_id)
+        except Exception as err:
+            self.log_error(chat_id, message_id, order_id, self, f"{err} {optionals['text']}")
+
+
+class BanDriver(AdminBaseHandler):
+
+    async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
+        chat_id, message_id, driver_id, optionals = await self.message_data(callback_query)
+        driver = self._db.get_user_by_id(driver_id)
+        driver_status = driver.driver_status
+        if driver_status == 150:
+            await self.send_message(self._config.ADMIN_ID, None, 'Водитель на заказе')
+            return
+        self._db.driver_end_shift(driver_id)
+        self._db.update_driver_status(driver_id, 30)
+        await self.send_message(self._config.ADMIN_ID, None, 'Водитель забанен')
+
+
+class BanUser(AdminBaseHandler):
+
+    async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None:
+        chat_id, message_id, user_id, optionals = await self.message_data(callback_query)
+        pass
+
+
+class OrderInfo(AdminBaseHandler):
+
+    async def __call__(self, message: types.Message, state:FSMContext) -> None: 
+        chat_id, message_id, order_id, optionals = await self.message_data(message)
+        try:
+            order_id = int(optionals['text'].lower().replace('order', ''))
+            order = self._db.get_order_by_id(order_id)
+            await self.show_admin_order(order)
+        except Exception as err:
+            self.log_error(chat_id, message_id, order_id, self, f"{err} {optionals['text']}")
+            
