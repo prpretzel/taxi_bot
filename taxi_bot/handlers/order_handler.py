@@ -204,7 +204,7 @@ class DriverComplete(OrderBaseHandler):
         end_trip_text = "\n".join(end_trip_text)
         passenger_text = [
             end_trip_text,
-            f"Расскажите о нас своим друзьям и получите возможность выиграть денежный приз!\nПодробности тут ➡️ /referral",
+            f"Расскажите о нас своим друзьям воспользовавшись реферальной ссылкой\nПодробности тут ➡️ /referral",
             f"Вы можете оставить отзыв о нашем такси в {self._config.BOT_SUPPORT}"
         ]
         passenger_text = "\n\n".join(passenger_text)
