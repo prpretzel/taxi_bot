@@ -71,7 +71,7 @@ class DriverBaseHandler(BaseHandler):
 class JobHandler(DriverBaseHandler):
 
     async def __call__(self, message: types.Message) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(message)
+        chat_id, message_id, order_id, optionals = await self.message_data(message)
         if not await self.create_user(message):
             return
         driver = self._db.get_user_by_id(chat_id)
@@ -93,29 +93,27 @@ class JobHandler(DriverBaseHandler):
 class DriverJob(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         await self.remove_inline_markup(callback_query, order_id)
         text = f'Для регистрации в качестве водителя Вам необходимо указать своё имя, а также цвет, марку и регистрационный номер автомобиля'
         await self.send_message(chat_id, order_id, text, 'driver_continue_registration')
-        await self.answer_callback_query(callback_query)
 
 
 class DriverContinueRegistration(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         await self.remove_inline_markup(callback_query, order_id)
         await DriverJobApplience.name.set()
         text = 'Введите Ваше имя:'
         message = await self.send_message(chat_id, order_id, text, 'driver_cancel_registration')
         await self.set_state(state, 'previous_message', message)
-        await self.answer_callback_query(callback_query)
 
 
 class DriverName(DriverBaseHandler):
 
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(message)
+        chat_id, message_id, order_id, optionals = await self.message_data(message)
         previous_message = await self.get_state(state, 'previous_message')
         await self.remove_inline_markup(previous_message, order_id)
         if len(optionals['text']) > 30:
@@ -133,7 +131,7 @@ class DriverName(DriverBaseHandler):
 class DriverCar(DriverBaseHandler):
 
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(message)
+        chat_id, message_id, order_id, optionals = await self.message_data(message)
         previous_message = await self.get_state(state, 'previous_message')
         await self.remove_inline_markup(previous_message, order_id)
         if len(optionals['text']) > 30:
@@ -156,7 +154,7 @@ class DriverCar(DriverBaseHandler):
 class DriverEndRegistration(DriverBaseHandler):
 
     async def __call__(self, message: types.Message, state: FSMContext) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(message)
+        chat_id, message_id, order_id, optionals = await self.message_data(message)
         name = await self.get_state(state, 'name')
         car = await self.get_state(state, 'car')
         await self.set_state(state, 'driver_id', chat_id)
@@ -174,41 +172,38 @@ class DriverEndRegistration(DriverBaseHandler):
 class DriverAccepted(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         driver_id, first_name, car = callback_query.message.text.split('\n')[-1].split('@')
         driver_id = int(driver_id)
         self._db.create_driver(driver_id, first_name, car)
         await self.send_message(chat_id, order_id, 'Водитель принят', delete_old=True)
         text = f"Вы стали водителем. Вы можете выйти на работу использую меню 'Работа в такси' либо через команду /job" + self.link
         await self.send_message(driver_id, order_id, text, delete_old=True)
-        await self.answer_callback_query(callback_query)
 
 
 class DriverRefused(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         driver_id, _, _ = callback_query.message.text.split('\n')[-1].split('@')
         await self.send_message(chat_id, order_id, 'Водитель отклонен')
         await self.send_message(driver_id, order_id, 'Ваша заявка отклонена')
-        await self.answer_callback_query(callback_query)
 
 
 class DriverCancelRegistration(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery, state: FSMContext) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         await self.send_message(chat_id, order_id, 'Регистрация отменена', delete_old=True)
         await self.send_message(chat_id, order_id, self._config.messages['call_taxi_message'], 'passenger_call_taxi')
         if await state.get_state():
             await state.finish()
-        await self.answer_callback_query(callback_query)
 
 
 class DriverStartWork(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         driver = self._db.get_user_by_id(chat_id)
         status = driver.driver_status
         if status in [100,150]:
@@ -221,13 +216,12 @@ class DriverStartWork(DriverBaseHandler):
             text = status
         await self.send_message(chat_id, order_id, text, delete_old=True)
         await self.show_active_orders(chat_id)
-        await self.answer_callback_query(callback_query)
 
 
 class DriverActiveOrder(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         active_order = self._db.get_drivers_active_order(chat_id)
         if active_order:
             order_id = active_order.order_id
@@ -241,13 +235,12 @@ class DriverActiveOrder(DriverBaseHandler):
             await self.send_message(chat_id, order_id, text, kb_name)
         else:
             await self.send_message(chat_id, order_id, 'У вас нет активных заказов')
-        await self.answer_callback_query(callback_query)
         
 
 class DriverStopWork(DriverBaseHandler):
 
     async def __call__(self, callback_query: types.CallbackQuery) -> None:
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         driver = self._db.get_user_by_id(chat_id)
         status = driver.driver_status
         kb_name = None
@@ -267,7 +260,6 @@ class DriverStopWork(DriverBaseHandler):
             await self.send_message(chat_id, None, f"Вы закончили свой рабочий день.\n" + report + self.link, delete_old=True)
         elif status==50:
             await self.send_message(chat_id, None, 'Вы сейчас не работаете' + self.link, delete_old=True)
-        await self.answer_callback_query(callback_query)
 
 
 class DriverTopUpMenu(DriverBaseHandler):

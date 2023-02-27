@@ -2,6 +2,7 @@ from aiogram import Dispatcher, Bot
 from taxi_bot.database_handler import DataBase
 from taxi_bot.load_config import Config
 from taxi_bot.logger import Logger
+from aiogram.dispatcher.filters import Text
 
 from taxi_bot.handlers.client import (
     StartHandler, 
@@ -59,7 +60,9 @@ from taxi_bot.handlers.admin_menu import (
     BroadcastMessage,
     OrderDetails,
     CancelBroadcast,
-    DeleteOldLogs
+    DeleteOldLogs,
+    UserInfo,
+    OrderInfo,
 )
 
 def register_handlers(
@@ -87,7 +90,8 @@ def register_handlers(
     dp.register_callback_query_handler(OrderDetails(*INSTANCES), ADMIN_COND, L('order_details'))
     dp.register_callback_query_handler(CancelBroadcast(*INSTANCES), ADMIN_COND, L('cancel_broadcast'), state='*')
     dp.register_callback_query_handler(DeleteOldLogs(*INSTANCES), ADMIN_COND, L('delete_old_logs'))
-
+    dp.register_message_handler(UserInfo(*INSTANCES), ADMIN_COND, Text(startswith='user', ignore_case=True))
+    dp.register_message_handler(OrderInfo(*INSTANCES), ADMIN_COND, Text(startswith='order', ignore_case=True))
     # main handlers
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['start'], state='*')
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['restart'], state='*')
