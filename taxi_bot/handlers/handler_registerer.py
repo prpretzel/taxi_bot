@@ -63,6 +63,8 @@ from taxi_bot.handlers.admin_menu import (
     DeleteOldLogs,
     UserInfo,
     OrderInfo,
+    BanUser,
+    BanDriver,
 )
 
 def register_handlers(
@@ -92,6 +94,8 @@ def register_handlers(
     dp.register_callback_query_handler(DeleteOldLogs(*INSTANCES), ADMIN_COND, L('delete_old_logs'))
     dp.register_message_handler(UserInfo(*INSTANCES), ADMIN_COND, Text(startswith='user', ignore_case=True))
     dp.register_message_handler(OrderInfo(*INSTANCES), ADMIN_COND, Text(startswith='order', ignore_case=True))
+    dp.register_callback_query_handler(BanUser(*INSTANCES), ADMIN_COND, L('ban_user'))
+    dp.register_callback_query_handler(BanDriver(*INSTANCES), ADMIN_COND, L('ban_driver'))
     # main handlers
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['start'], state='*')
     dp.register_message_handler(StartHandler(*INSTANCES), commands=['restart'], state='*')

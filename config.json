@@ -153,6 +153,14 @@
         {"data":"invite_broadcast", "text":"Разослать Сообщение"}
       ]
     },
+    "admin_user_actions" : {
+      "type" : "inline",
+      "layout" : [2],
+      "buttons" : [
+        {"data":"ban_user", "text":"Бан пассажира"},
+        {"data":"ban_driver", "text":"Бан водителя"}
+      ]
+    },
     "broadcast_message" : {
       "type" : "inline",
       "layout" : [2,2,1],

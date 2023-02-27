@@ -111,8 +111,9 @@ class BaseHandler:
         seconds = str(dt%60).zfill(2)
         return f"{hours}:{minutes}:{seconds}"
     
-    async def send_message(self, chat_id, order_id, text, kb_name=None, delete_old=False, shown=1):
-        kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
+    async def send_message(self, chat_id, order_id, text, kb_name=None, kb_suffix=None, delete_old=False, shown=1):
+        kb_suffix = kb_suffix if kb_suffix else order_id
+        kb = keyboard_generator(self._config.buttons[kb_name], kb_suffix) if kb_name else None
         try:
             message = await self._bot.send_message(
                 chat_id=chat_id,
@@ -194,7 +195,7 @@ class BaseHandler:
                     f'Driver shift_id: {user.driver_shift_id}',
                 ]
             user_info = '\n'.join(user_info)
-            await self.send_message(self._config.ADMIN_ID, None, user_info)
+            await self.send_message(self._config.ADMIN_ID, None, user_info, kb_name='admin_user_actions', kb_suffix=user_id)
             
     async def edit_message(self, chat_id, message_id, order_id, text=None, kb_name=None):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None

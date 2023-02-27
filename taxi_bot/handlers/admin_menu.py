@@ -136,6 +136,27 @@ class UserInfo(AdminBaseHandler):
             self.log_error(chat_id, message_id, order_id, self, f"{err} {optionals['text']}")
 
 
+class BanDriver(AdminBaseHandler):
+
+    async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
+        chat_id, message_id, driver_id, optionals = await self.message_data(callback_query)
+        driver = self._db.get_user_by_id(driver_id)
+        driver_status = driver.driver_status
+        if driver_status == 150:
+            await self.send_message(self._config.ADMIN_ID, None, 'Водитель на заказе')
+            return
+        self._db.driver_end_shift(driver_id)
+        self._db.update_driver_status(driver_id, 30)
+        await self.send_message(self._config.ADMIN_ID, None, 'Водитель забанен')
+
+
+class BanUser(AdminBaseHandler):
+
+    async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None:
+        chat_id, message_id, user_id, optionals = await self.message_data(callback_query)
+        pass
+
+
 class OrderInfo(AdminBaseHandler):
 
     async def __call__(self, message: types.Message, state:FSMContext) -> None: 

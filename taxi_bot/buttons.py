@@ -41,7 +41,5 @@ def keyboard_generator(kb_config: dict, suffix: str=''):
     
     return keyboard
 
-
-
 def get_kbs(keyboard_configs: dict, data_suffix: str=''):
     return {kb_id:keyboard_generator(kb_config, data_suffix) for kb_id, kb_config in keyboard_configs.items()}
