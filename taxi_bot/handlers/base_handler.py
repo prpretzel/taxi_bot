@@ -79,7 +79,13 @@ class BaseHandler:
                 f"Стоимость: {price}",
             ]
             text = '\n'.join(text)
-            await self.send_message(chat_id, order_id, text, kb_name, delete_old)
+            await self.send_message(
+                chat_id=chat_id, 
+                order_id=order_id, 
+                text=text, 
+                kb_name=kb_name, 
+                delete_old=delete_old, 
+            )
 
     async def show_active_orders(self, driver_id):
         active_orders = self._db.get_orders_by_status(100)
