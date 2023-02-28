@@ -94,19 +94,12 @@ class BroadcastMessage(AdminBaseHandler):
     async def __call__(self, callback_query: types.CallbackQuery, state:FSMContext) -> None: 
         chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
         text = await self.get_state(state, 'message')
+        await self.edit_message(chat_id, message_id, order_id, text)
         target = callback_query.data.split('@')[-1]
         users_id = [user.user_id for user in self._db.get_group(target).all()]
         for user_id in users_id:
             await self.send_message(user_id, order_id, text, 'hide_message')
         await state.finish()
-
-
-class OrderDetails(AdminBaseHandler):
-
-    async def __call__(self, callback_query: types.CallbackQuery) -> None: 
-        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
-        order = self._db.get_order_by_id(order_id)
-        await self.show_admin_order(order, callback_query=callback_query)
 
 
 class CancelBroadcast(AdminBaseHandler):
@@ -116,6 +109,14 @@ class CancelBroadcast(AdminBaseHandler):
         await self.send_message(chat_id, order_id, 'Админское меню', 'admin_menu', delete_old=True)
         if await state.get_state():
             await state.finish()
+
+
+class OrderDetails(AdminBaseHandler):
+
+    async def __call__(self, callback_query: types.CallbackQuery) -> None: 
+        chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
+        order = self._db.get_order_by_id(order_id)
+        await self.show_admin_order(order, callback_query=callback_query)
 
 
 class DeleteOldLogs(AdminBaseHandler):
