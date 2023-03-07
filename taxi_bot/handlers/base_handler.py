@@ -358,3 +358,7 @@ class BaseHandler:
     
     def get_referral_link(self, chat_id):
         return f"{self._config.BOT_LINK}?start={chat_id}"
+    
+    def get_url_link(self, text, url):
+        from aiogram.utils.markdown import hlink
+        return hlink(text, url)

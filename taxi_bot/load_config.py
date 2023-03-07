@@ -25,6 +25,7 @@ class Config:
         self.MODER_IDs = self._creds.get('MODER_IDs')
         self.BOT_LINK = self._creds.get('BOT_LINK')
         self.BOT_SUPPORT = self._creds.get('BOT_SUPPORT')
+        self.VK_LINK = self._creds.get('VK_LINK')
         self.messages = {name.value: text.value for name, text in open_xls('messages.xls').sheet_by_index(0)}
         self.buttons = self._config.get('buttons')
 
