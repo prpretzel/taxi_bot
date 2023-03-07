@@ -79,7 +79,13 @@ class BaseHandler:
                 f"Стоимость: {price}",
             ]
             text = '\n'.join(text)
-            await self.send_message(chat_id, order_id, text, kb_name, delete_old)
+            await self.send_message(
+                chat_id=chat_id, 
+                order_id=order_id, 
+                text=text, 
+                kb_name=kb_name, 
+                delete_old=delete_old, 
+            )
 
     async def show_active_orders(self, driver_id):
         active_orders = self._db.get_orders_by_status(100)
@@ -111,8 +117,9 @@ class BaseHandler:
         seconds = str(dt%60).zfill(2)
         return f"{hours}:{minutes}:{seconds}"
     
-    async def send_message(self, chat_id, order_id, text, kb_name=None, delete_old=False, shown=1):
-        kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
+    async def send_message(self, chat_id, order_id, text, kb_name=None, kb_suffix=None, delete_old=False, shown=1):
+        kb_suffix = kb_suffix if kb_suffix else order_id
+        kb = keyboard_generator(self._config.buttons[kb_name], kb_suffix) if kb_name else None
         try:
             message = await self._bot.send_message(
                 chat_id=chat_id,
@@ -139,11 +146,6 @@ class BaseHandler:
         driver = self._db.get_user_by_id(order.driver_id)
         driver_contact = f"{self.tg_user_link(order.driver_id, driver.first_name)} {driver.phone_number}" if driver else 'Водитель не назначен'
         order_date = order.order_dt.date()
-        # order_dt = order.order_dt if order.order_dt else None
-        # accept_dt = order.accept_dt if order.accept_dt else None
-        # wait_dt = order.wait_dt if order.wait_dt else None
-        # pick_dt = order.pick_dt if order.pick_dt else None
-        # end_dt = order.end_dt if order.end_dt else None
         order_dt, order_dt_str = time_handler_2(order.order_dt)
         accept_dt, accept_dt_str = time_handler_2(order.accept_dt)
         wait_dt, wait_dt_str = time_handler_2(order.wait_dt)
@@ -170,9 +172,36 @@ class BaseHandler:
         if not callback_query:
             await self.send_message(self._config.ADMIN_ID, order_id, text, 'order_details', shown=2)
         else:
-            chat_id, message_id, order_id, optionals = self.message_data(callback_query)
+            chat_id, message_id, order_id, optionals = await self.message_data(callback_query)
             await self.edit_message(chat_id, message_id, order_id, text, 'order_details')
             await self.answer_callback_query(callback_query)
+            
+    async def show_admin_user(self, user_id):
+        from datetime import datetime
+        def str_date_from_dt(dt):
+            return dt.strftime('%Y-%m-%d')
+        
+        user = self._db.get_user_by_id(user_id)
+        if user:
+            user_info = [
+                f'ID: {user_id}',
+                self.tg_user_link(user_id, user.first_name),
+                f'Phone number: {user.phone_number}',
+                f'Registration date: {str_date_from_dt(user.user_registration_date)}',
+                f'Active: {user.active}',
+            ]
+            if user.referral:
+                user_info.append(f"Referral: {self.tg_user_link(user.referral, 'referral link')}")
+            if user.driver_status:
+                user_info += [
+                    f'Driver registration: {str_date_from_dt(user.driver_registration_date)}',
+                    f'Driver status: {user.driver_status}',
+                    f'Driver car: {user.driver_car}',
+                    f'Driver balance: {user.driver_balance}',
+                    f'Driver shift_id: {user.driver_shift_id}',
+                ]
+            user_info = '\n'.join(user_info)
+            await self.send_message(self._config.ADMIN_ID, None, user_info, kb_name='admin_user_actions', kb_suffix=user_id)
             
     async def edit_message(self, chat_id, message_id, order_id, text=None, kb_name=None):
         kb = keyboard_generator(self._config.buttons[kb_name], order_id) if kb_name else None
@@ -229,7 +258,7 @@ class BaseHandler:
             self.log_error(chat_id, None, order_id, self, err)
 
     async def remove_inline_markup(self, query, order_id):
-        chat_id, message_id, order_id, optionals = self.message_data(query)
+        chat_id, message_id, order_id, optionals = await self.message_data(query)
         try:
             if isinstance(query, types.Message):
                 message = await query.delete_reply_markup()
@@ -246,7 +275,7 @@ class BaseHandler:
             self.log_error(chat_id, None, order_id, self, err)
         await message.delete()
 
-    def message_data(self, input_, order_id=None):
+    async def message_data(self, input_, order_id=None):
         chat_id = input_.from_user.id
         optionals = dict()
         if isinstance(input_, types.CallbackQuery):
@@ -258,6 +287,7 @@ class BaseHandler:
             optionals['data'] = input_.data
             optionals['text'] = input_.message.text
             self.log_info(chat_id, message_id, order_id, self, optionals['data'])
+            await self.answer_callback_query(input_)
         elif isinstance(input_, types.Message):
             message_id = input_.message_id
             if 'text' in input_:
@@ -292,11 +322,10 @@ class BaseHandler:
         return f'<a href="tg://user?id={chat_id}">{first_name}</a>'
     
     async def answer_callback_query(self, callback_query):
-        chat_id, message_id, order_id, optionals = self.message_data(callback_query)
         try:
             await self._bot.answer_callback_query(callback_query.id)
         except Exception as err:
-            self.log_error(chat_id, message_id, order_id, self, err)
+            self.log_error(callback_query.from_user.id, None, None, self, err)
             
     def map_status(self, order_status):
         status_mapper = {
@@ -322,7 +351,10 @@ class BaseHandler:
             50 : 'Отмена пассажиром      ',
             150: 'Отмена водителем       ',
         }
-        return status_mapper[order_status]
+        if order_status in status_mapper.keys():
+            return status_mapper[order_status]
+        else:
+            return order_status
     
     def get_referral_link(self, chat_id):
         return f"{self._config.BOT_LINK}?start={chat_id}"
